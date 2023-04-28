@@ -42,7 +42,6 @@ def setup_logging(default_path='logging.json', default_level=logging.info, env_k
         logging.config.dictConfig(config)
     else:
         logging.basicConfig(level=default_level)
-
 def getAccountId(IC_API_KEY):
     ##########################################################
     ## Get AccountId for this API Key
@@ -57,12 +56,11 @@ def getAccountId(IC_API_KEY):
         quit()
 
     return api_key["account_id"]
-
 def createSDK(IC_API_KEY):
     """
        Create SDK clients
        """
-    global usage_reports_service, resource_controller_service, global_tagging_service, iam_identity_service, global_search_service
+    global usage_reports_service, resource_controller_service, iam_identity_service, global_search_service
 
     try:
         authenticator = IAMAuthenticator(IC_API_KEY)
@@ -77,25 +75,26 @@ def createSDK(IC_API_KEY):
         quit()
 
     try:
+
         usage_reports_service = UsageReportsV4(authenticator=authenticator)
+        usage_reports_service.enable_retries(max_retries=5, retry_interval=1.0)
+        usage_reports_service.set_http_config({'timeout': 120})
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
         quit()
 
     try:
         resource_controller_service = ResourceControllerV2(authenticator=authenticator)
-    except ApiException as e:
-        logging.error("API exception {}.".format(str(e)))
-        quit()
-
-    try:
-        global_tagging_service = GlobalTaggingV1(authenticator=authenticator)
+        resource_controller_service.enable_retries(max_retries=5, retry_interval=1.0)
+        resource_controller_service.set_http_config({'timeout': 120})
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
         quit()
 
     try:
         global_search_service = GlobalSearchV2(authenticator=authenticator)
+        global_search_service.enable_retries(max_retries=5, retry_interval=1.0)
+        global_search_service.set_http_config({'timeout': 120})
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
         quit()
@@ -225,7 +224,6 @@ def getInstancesUsage(start,end):
     """
     Get instances resource usage for month of specific resource_id
     """
-
     def getResourceInstancefromCloud(resourceId):
         """
         Retrieve Resource Details from resource controller
@@ -272,23 +270,32 @@ def getInstancesUsage(start,end):
         usageMonth = start.strftime("%Y-%m")
         logging.info("Retrieving Instances Usage from {}.".format(usageMonth))
         start += relativedelta(months=+1)
-        record = 0
-        instances_usage = usage_reports_service.get_resource_usage_account(
-            account_id=accountId,
-            billingmonth=usageMonth, names=True, limit=limit).get_result()
+        try:
+            instances_usage = usage_reports_service.get_resource_usage_account(
+                account_id=accountId,
+                billingmonth=usageMonth, names=True, limit=limit).get_result()
+        except ApiException as e:
+            logging.error("Fatal Error with get_resource_usage_account: {}".format(e))
+            quit()
 
+        recordstart = 1
+        if recordstart + limit > instances_usage["count"]:
+            recordstop = instances_usage["count"]
+        else:
+            recordstop = recordstart + limit - 1
+        logging.info("Requesting Instance {} Usage: retrieved from {} to {} of Total {}".format(usageMonth, recordstart,
+                                                                                                recordstop,
+                                                                                                instances_usage[
+                                                                                                    "count"]))
         if "next" in instances_usage:
             nextoffset = instances_usage["next"]["offset"]
         else:
             nextoffset = ""
 
-        rows_count = instances_usage["count"]
-
         while True:
             for instance in instances_usage["resources"]:
-                record = record + 1
-                logging.info("{} Retrieving Instance {} of {} {}".format(usageMonth, record, rows_count, instance["resource_instance_id"]))
-                logging.debug("instance={}".format(instance))
+                logging.debug("Parsing Details for Instance {}.".format(instance["resource_instance_id"]))
+
                 if "pricing_country" in instance:
                     pricing_country = instance["pricing_country"]
                 else:
@@ -341,15 +348,41 @@ def getInstancesUsage(start,end):
                 else:
                     created_at = ""
 
+                if "created_by" in resource_instance:
+                    created_by = resource_instance["created_by"]
+                else:
+                    created_by = ""
+
                 if "updated_at" in resource_instance:
                     updated_at = resource_instance["updated_at"]
                 else:
                     updated_at = ""
 
+                if "updated_by" in resource_instance:
+                    updated_by = resource_instance["updated_by"]
+                else:
+                    updated_by = ""
+
+
                 if "deleted_at" in resource_instance:
                     deleted_at = resource_instance["deleted_at"]
                 else:
                     deleted_at = ""
+
+                if "deleted_by" in resource_instance:
+                    deleted_by = resource_instance["deleted_by"]
+                else:
+                    deleted_by = ""
+
+                if "restored_at" in resource_instance:
+                    restored_at = resource_instance["restored_at"]
+                else:
+                    restored_at = ""
+
+                if "restored_by" in resource_instance:
+                    restored_by = resource_instance["restored_by"]
+                else:
+                    restored_by = ""
 
                 if "state" in resource_instance:
                     state = resource_instance["state"]
@@ -413,9 +446,14 @@ def getInstancesUsage(start,end):
                     role = ""
 
                 row_addition = {
-                    "instance_created_at": created_at,
-                    "instance_updated_at": updated_at,
-                    "instance_deleted_at": deleted_at,
+                    "created_at": created_at,
+                    "created_by": created_by,
+                    "updated_at": updated_at,
+                    "updated_by": updated_by,
+                    "deleted_at": deleted_at,
+                    "deleted_by": deleted_by,
+                    "restored_at": restored_at,
+                    "restored_by": restored_by,
                     "instance_state": state,
                     "type": type,
                     "roks_cluster_id": roks_cluster_id,
@@ -463,27 +501,35 @@ def getInstancesUsage(start,end):
 
                     data.append(row.copy())
 
-            if nextoffset == "":
-                """ No more records break out of loop """
-                break
-            else:
-                """ get more """
-                instances_usage = usage_reports_service.get_resource_usage_account(
-                    account_id=accountId,
-                    billingmonth=usageMonth, names=True,limit=limit, start=nextoffset).get_result()
+            if nextoffset != "":
+                recordstart = recordstart + limit
+                if recordstart + limit > instances_usage["count"]:
+                    recordstop = instances_usage["count"]
+                else:
+                    recordstop = recordstart + limit - 1
+                logging.info("Requesting Instance {} Usage: retrieving from {} to {} of Total {}".format(usageMonth, recordstart,
+                                                                                              recordstop,
+                                                                                              instances_usage["count"]))
+                try:
+                    instances_usage = usage_reports_service.get_resource_usage_account(
+                        account_id=accountId,
+                        billingmonth=usageMonth, names=True,limit=limit, start=nextoffset).get_result()
+                except ApiException as e:
+                    logging.error("Error with get_resource_usage_account: {}".format(e))
+                    quit()
+
                 if "next" in instances_usage:
                     nextoffset = instances_usage["next"]["offset"]
                 else:
                     nextoffset = ""
-
-            logging.debug("instance_usage {}={}".format(usageMonth, instances_usage))
-            #logging.info("Requesting Instance Usage: Start {}, Limit={}, Count={}".format(record, instances_usage["limit"], instances_usage["count"]))
+            else:
+                break
 
 
         instancesUsage = pd.DataFrame(data, columns=['account_id', "month", "service_name", "service_id", "instance_name","instance_id", "plan_name", "plan_id", "region", "pricing_region",
                                                  "resource_group_name","resource_group_id", "billable", "pricing_country", "billing_country", "currency_code", "pricing_plan_id",
-                                                 "instance_created_at", "instance_updated_at", "instance_deleted_at", "instance_state", "type", "roks_cluster_id", "roks_cluster_name", "instance_profile", "cpu_family",
-                                                 "numberOfVirtualCPUs", "MemorySizeMiB", "NodeName", "NumberOfGPUs", "NumberOfInstStorageDisks", "availability_zone",
+                                                 "created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "restored_at", "restored_by", "instance_state", "type",
+                                                 "roks_cluster_id", "roks_cluster_name", "instance_profile", "cpu_family", "numberOfVirtualCPUs", "MemorySizeMiB", "NodeName", "NumberOfGPUs", "NumberOfInstStorageDisks", "availability_zone",
                                                  "instance_role", "metric", "metric_name", "unit", "unit_name", "quantity", "cost", "rated_cost", "rateable_quantity", "price", "discount"])
 
     return instancesUsage
