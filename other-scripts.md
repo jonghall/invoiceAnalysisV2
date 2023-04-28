@@ -2,7 +2,6 @@
 
 ## Table of Contents
 1. Identity and Access Management Requirements
-2. estimatedCloudUsage.py 
 3. ibmCloudUsage.py
 4. classicConfigAnalysis.py
 5. classicConfigReport.py
@@ -16,26 +15,27 @@
 ### Estimating IBM Cloud Usage Month To Date
 
 ```bazaar
-export IC_API_KEY=<ibm cloud apikey>
-python estimateCloudUsage.py
+usage: ibmCloudUsage.py [-h] [--apikey apikey] [--output OUTPUT] [--load | --no-load] [--save | --no-save] [--start START] [--end END]
 
-usage: estimateCloudUsage.py [-h] [-k apikey][--output OUTPUT]
+Calculate IBM Cloud Usage.
 
-Estimate Platform as a Service Usage.
+options:
+  -h, --help         show this help message and exit
+  --apikey apikey    IBM Cloud API Key
+  --output OUTPUT    Filename Excel output file. (including extension of .xlsx)
+  --load, --no-load  load dataframes from pkl files.
+  --save, --no-save  Store dataframes to pkl files.
+  --start START      Start Month YYYY-MM.
+  --end END          End Month YYYY-MM.
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -k apikey, --IC_API_KEY apikey
-                        IBM Cloud API Key
-
-  --output OUTPUT       Filename Excel output file. (including extension of .xlsx)
 ```
 ### Output Description for estimateCloudUsage.py
-Note this shows current month usage only.  For SLIC/CFTS invoices, this actual usage from IBM Cloud will be consolidated onto the classic RECURRING invoice
+Note : If current month included this will be month to date.  For SLIC/CFTS invoices, this actual usage from IBM Cloud will be consolidated onto the classic RECURRING invoice
 one month later, and be invoiced on the SLIC/CFTS invoice at the end of that month.  (i.e. April Usage, appears on the June 1st RECURRING invoice, and will
 appear on the end of June SLIC/CFTS invoice)  Additionally in most cases for SLIC accounts, discounts are applied at the time the data is fed to the RECURRING
 invoice.  Other words the USAGE charges are generally list price, but eppear on the Portal RECURRING invoice at their discounted rate.
 *Excel Tab Explanation*
-   - ***Detail*** is a table of all month to date usage for billable metrics for each platform service.   Each row contains a unique service, resource, and metric with the rated usage and cost, and the resulting cost for discounted items.
-   - ***PaaS_Summary*** is a pibot table showing the month to date estimated cost for each PaaS service.
-   - ***PaaS_Metric_Summary*** is a pivot table showing the month to date usage and cost for each metric for each service instance and plan.
+   - ***ServiceUsageDetail*** is a table for the range of months specified for billable metrics for each platform service.   Each row contains a unique service, resource, and metric with the rated usage and cost, and the resulting cost for discounted items.
+   - ***Instance_delete*** is a table for the range of months specified for each unique service instance (ie in the case of VPC Virtual Servers each virtual server is listed).  Each row contains details on that instance included rated usage and cost.
+   - ***Usage_Summary*** is a pivot table showing each month estimated cost for each service.  Note if current month included amount is month to date.
+   - ***MetricPlanSummary*** is a pivot table showing each month estimated cost for each service and related usage metric.  Note if current month included amount is month to date.
