@@ -1401,7 +1401,7 @@ if __name__ == "__main__":
     serverDetailFlag = args.serverdetail
     cosdetailFlag =args.cosdetail
 
-    if args.months != None:
+    if args.startdate == None or args.enddate == None:
         months = int(args.months)
         dallas = tz.gettz('US/Central')
         today = datetime.today().astimezone(dallas)
@@ -1415,13 +1415,8 @@ if __name__ == "__main__":
             startdate = today - relativedelta(months=(months))
             startdate = startdate.strftime("%Y-%m")
     else:
-        if args.startdate == None or args.enddate == None:
-            logging.error(
-                "You must provide either a number of months (--months) or a start (-s) and end month (-e) in the format of YYYY-MM.")
-            quit()
-        else:
-            startdate = args.startdate
-            enddate = args.enddate
+        startdate = args.startdate
+        enddate = args.enddate
 
     """
     If no APIKEY set, then check for internal IBM credentials
