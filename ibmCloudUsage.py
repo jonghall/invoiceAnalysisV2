@@ -30,6 +30,7 @@ from ibm_cloud_sdk_core import ApiException
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from dotenv import load_dotenv
 
+
 def setup_logging(default_path='logging.json', default_level=logging.info, env_key='LOG_CFG'):
     # read logging.json for log parameters to be ued by script
     path = default_path
@@ -640,6 +641,34 @@ def createClusterTab(instancesUsage):
         worksheet.set_column(6, 5 + months, 10, format3)
         worksheet.set_column(6 + months, 6 + (months * 2), 12, format1)
     return
+def multi_part_upload(bucket_name, item_name, file_path):
+    try:
+        logging.info("Starting file transfer for {0} to bucket: {1}".format(item_name, bucket_name))
+        # set 5 MB chunks
+        part_size = 1024 * 1024 * 5
+
+        # set threadhold to 15 MB
+        file_threshold = 1024 * 1024 * 15
+
+        # set the transfer threshold and chunk size
+        transfer_config = ibm_boto3.s3.transfer.TransferConfig(
+            multipart_threshold=file_threshold,
+            multipart_chunksize=part_size
+        )
+
+        # the upload_fileobj method will automatically execute a multi-part upload
+        # in 5 MB chunks for all files over 15 MB
+        with open(file_path, "rb") as file_data:
+            cos.Object(bucket_name, item_name).upload_fileobj(
+                Fileobj=file_data,
+                Config=transfer_config
+            )
+        logging.info("Transfer for {0} complete".format(item_name))
+    except ClientError as be:
+        logging.error("CLIENT ERROR: {0}".format(be))
+    except Exception as e:
+        logging.error("Unable to complete multi-part upload: {0}".format(e))
+    return
 
 if __name__ == "__main__":
     setup_logging()
@@ -651,6 +680,11 @@ if __name__ == "__main__":
     parser.add_argument("--save", action=argparse.BooleanOptionalAction, help="Store dataframes to pkl files.")
     parser.add_argument("--start", help="Start Month YYYY-MM.")
     parser.add_argument("--end", help="End Month YYYY-MM.")
+    parser.add_argument("--cos", "--COS", action=argparse.BooleanOptionalAction, help="Write output to COS bucket destination specified.")
+    parser.add_argument("--COS_APIKEY", default=os.environ.get('COS_APIKEY', None), help="COS apikey to use for Object Storage.")
+    parser.add_argument("--COS_ENDPOINT", default=os.environ.get('COS_ENDPOINT', None), help="COS endpoint to use for Object Storage.")
+    parser.add_argument("--COS_INSTANCE_CRN", default=os.environ.get('COS_INSTANCE_CRN', None), help="COS Instance CRN to use for file upload.")
+    parser.add_argument("--COS_BUCKET", default=os.environ.get('COS_BUCKET', None), help="COS Bucket name to use for file upload.")
     args = parser.parse_args()
     start = datetime.strptime(args.start, "%Y-%m")
     end = datetime.strptime(args.end, "%Y-%m")
@@ -692,6 +726,13 @@ if __name__ == "__main__":
     createInstancesDetailTab(instancesUsage)
     createUsageSummaryTab(accountUsage)
     createMetricSummary(accountUsage)
-    #createClusterTab(instancesUsage)
     writer.close()
+    if args.cos:
+        cos = ibm_boto3.resource("s3",
+                                 ibm_api_key_id=args.COS_APIKEY,
+                                 ibm_service_instance_id=args.COS_INSTANCE_CRN,
+                                 config=Config(signature_version="oauth"),
+                                 endpoint_url=args.COS_ENDPOINT
+                                 )
+        multi_part_upload(args.COS_BUCKET, args.output, "./" + args.output)
     logging.info("Usage Report is complete.")
