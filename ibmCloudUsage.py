@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # Author: Jon Hall
 # Copyright (c) 2023
