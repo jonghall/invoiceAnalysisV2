@@ -16,7 +16,7 @@
 
 ```bazaar
 usage: ibmCloudUsage.py [-h] [--apikey apikey] [--output OUTPUT] [--load | --no-load] [--save | --no-save] [--months MONTHS] [--vpc | --no-vpc] [-s STARTDATE] [-e ENDDATE] [--cos | --no-cos | --COS | --no-COS] [--COS_APIKEY COS_APIKEY]
-                        [--COS_ENDPOINT COS_ENDPOINT] [--COS_INSTANCE_CRN COS_INSTANCE_CRN] [--COS_BUCKET COS_BUCKET] [--sendGridApi SENDGRIDAPI] [--sendGridTo SENDGRIDTO] [--sendGridFrom SENDGRIDFROM]
+                        [--COS_ENDPOINT COS_ENDPOINT] [--COS_INSTANCE_CRN COS_INSTANCE_CRN] [--COS_BUCKET COS_BUCKET] [--sendgrid | no-sendgrid] [--sendGridApi SENDGRIDAPI] [--sendGridTo SENDGRIDTO] [--sendGridFrom SENDGRIDFROM]
                         [--sendGridSubject SENDGRIDSUBJECT]
 
 Calculate IBM Cloud Usage.
@@ -43,6 +43,8 @@ options:
                         COS Instance CRN to use for file upload.
   --COS_BUCKET COS_BUCKET
                         COS Bucket name to use for file upload.
+  --sendgrid, --no-sendgrid
+                        Send file to email distribution list using SendGrid. 
   --sendGridApi SENDGRIDAPI
                         SendGrid ApiKey used to email output.
   --sendGridTo SENDGRIDTO
