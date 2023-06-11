@@ -707,7 +707,7 @@ def createVolumeTab(volumes, month):
     Create BM VCPU deployed by role, account, and az
     """
 
-    logging.info("Calculating VOLUMES deployed.")
+    logging.info("Calculating Block Volumes deployed.")
     """ Query """
     volumes = volumes.query('metric == "GIGABYTE_HOURS" and month == @month')
     volumes = pd.pivot_table(volumes, index=["region", "availability_zone", "resource_group_name", "instance_role", "provision_date", "deprovision_date"],
@@ -814,7 +814,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", default=os.environ.get('output', 'ibmCloudUsage.xlsx'), help="Filename Excel output file. (including extension of .xlsx)")
     parser.add_argument("--load", action=argparse.BooleanOptionalAction, help="load dataframes from pkl files for testing purposes.")
     parser.add_argument("--save", action=argparse.BooleanOptionalAction, help="Store dataframes to pkl files for testing purposes.")
-    parser.add_argument("--months", default=os.environ.get('months', 1), help="Number of months including last full month to include in report.")
+    parser.add_argument("--months", default=os.environ.get('months', 1), help="Number of months including current month to include in report.")
     parser.add_argument("--vpc", action=argparse.BooleanOptionalAction, help="Include additional VPC analysis tabs.")
     parser.add_argument("-s", "--startdate", default=os.environ.get('startdate', None), help="Start Year & Month in format YYYY-MM")
     parser.add_argument("-e", "--enddate", default=os.environ.get('enddate', None), help="End Year & Month in format YYYY-MM")
