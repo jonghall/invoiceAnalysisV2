@@ -15,7 +15,7 @@
 
 
 __author__ = 'jonhall'
-import os, logging, logging.config, json, os.path, argparse, calendar, time
+import os, logging, logging.config, os.path, argparse, base64
 import pandas as pd
 import numpy as np
 from datetime import datetime
