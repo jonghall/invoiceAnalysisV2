@@ -265,7 +265,7 @@ def getInstancesUsage(start,end):
         return tags
 
     data = []
-    limit = 100  ## set limit of record returned
+    limit = 200  ## set limit of record returned
 
     """ Loop through months """
     while start <= end:
@@ -408,16 +408,25 @@ def getInstancesUsage(start,end):
                     type = ""
 
                 """
-                For VPC Virtual Servers obtain intended profile and virtual server details
+                For  Servers obtain intended profile and virtual or baremetal server details
                 """
                 az = ""
+                LifecycleAction = ""
                 profile = ""
                 cpuFamily = ""
                 numberOfVirtualCPUs = ""
-                MemorySizeMiB = ""
-                NodeName = ""
                 NumberOfGPUs = ""
                 NumberOfInstStorageDisks = ""
+                MemorySizeMiB = ""
+                NodeName = ""
+                NumberofCores = ""
+                NumberofSockets = ""
+                Bandwidth = ""
+                OSName = ""
+                OSVendor = ""
+                OSVersion = ""
+                Capacity = ""
+                IOPS = ""
 
                 if "extensions" in resource_instance:
                     if "VirtualMachineProperties" in resource_instance["extensions"]:
@@ -431,11 +440,26 @@ def getInstancesUsage(start,end):
 
                     elif "BMServerProperties" in resource_instance["extensions"]:
                         profile = resource_instance["extensions"]["BMServerProperties"]["Profile"]
-                        cpuFamily = ""
+                        MemorySizeMiB = resource_instance["extensions"]["BMServerProperties"]["MemorySizeMiB"]
+                        NodeName = resource_instance["extensions"]["BMServerProperties"]["NodeName"]
+                        NumberofCores = resource_instance["extensions"]["BMServerProperties"]["NumberOfCores"]
+                        NumberofSockets = resource_instance["extensions"]["BMServerProperties"]["NumberOfSockets"]
+                        Bandwidth = resource_instance["extensions"]["BMServerProperties"]["Bandwidth"]
+                        OSName = resource_instance["extensions"]["BMServerProperties"]["OSName"]
+                        OSVendor = resource_instance["extensions"]["BMServerProperties"]["OSVendor"]
+                        OSVersion = resource_instance["extensions"]["BMServerProperties"]["OSVersion"]
+
+                    elif "VolumeInfo" in resource_instance["extensions"]:
+                        Capacity = resource_instance["extensions"]["VolumeInfo"]["Capacity"]
+                        IOPS = resource_instance["extensions"]["VolumeInfo"]["IOPS"]
 
                     if "Resource" in resource_instance["extensions"]:
                         if "AvailabilityZone" in resource_instance["extensions"]["Resource"]:
                             az = resource_instance["extensions"]["Resource"]["AvailabilityZone"]
+                        if "Location" in resource_instance["extensions"]["Resource"]:
+                            region = resource_instance["extensions"]["Resource"]["Location"]["Region"]
+                        if "LifecycleAction" in resource_instance["extensions"]["Resource"]:
+                            LifecycleAction = resource_instance["extensions"]["Resource"]["LifecycleAction"]
 
                 # get tags attached to instance from cache or resource controller
                 tags = getTags(instance["resource_instance_id"])
@@ -466,6 +490,15 @@ def getInstancesUsage(start,end):
                     "NodeName":  NodeName,
                     "NumberOfGPUs": NumberOfGPUs,
                     "NumberOfInstStorageDisks": NumberOfInstStorageDisks,
+                    "lifecycleAction": LifecycleAction,
+                    "BMnumberofCores": NumberofCores,
+                    "BMnumberofSockets": NumberofSockets,
+                    "BMbandwidth": Bandwidth,
+                    "OSName": OSName,
+                    "OSVendor": OSVendor,
+                    "OSVersion": OSVersion,
+                    "capacity": Capacity,
+                    "iops": IOPS,
                     "tags": tags,
                     "instance_role": role,
                     "availability_zone": az
@@ -526,14 +559,8 @@ def getInstancesUsage(start,end):
                     nextoffset = ""
             else:
                 break
-
-
-        instancesUsage = pd.DataFrame(data, columns=['account_id', "month", "service_name", "service_id", "instance_name","instance_id", "plan_name", "plan_id", "region", "pricing_region",
-                                                 "resource_group_name","resource_group_id", "billable", "pricing_country", "billing_country", "currency_code", "pricing_plan_id", "provision_date",
-                                                 "created_at", "created_by", "updated_at", "updated_by", "deprovision_date", "deleted_at", "deleted_by", "restored_at", "restored_by", "instance_state", "type",
-                                                 "roks_cluster_id", "roks_cluster_name", "instance_profile", "cpu_family", "numberOfVirtualCPUs", "MemorySizeMiB", "NodeName", "NumberOfGPUs", "NumberOfInstStorageDisks", "availability_zone",
-                                                 "tags", "instance_role", "metric", "metric_name", "unit", "unit_name", "quantity", "cost", "rated_cost", "rateable_quantity", "price", "discount"])
-
+        """ created Datatable from List """
+        instancesUsage = pd.DataFrame(data, columns=list(data[0].keys()))
     return instancesUsage
 
 def createServiceDetail(paasUsage):
@@ -618,31 +645,86 @@ def createVPCServerListTab(servers):
     """
     logging.info("Creating VPC Server Detail tab.")
 
-    servers.to_excel(writer, "VPCServerDetail")
-    worksheet = writer.sheets['VPCServerDetail']
+    servers.to_excel(writer, "VPC_Servers")
+    worksheet = writer.sheets['VPC_Servers']
     totalrows,totalcols=servers.shape
     worksheet.autofilter(0,0,totalrows,totalcols)
     return
-def createVPCProvioningTab(servers):
+def createVirtualServerTab(servers, month):
     """
-    Create Pivot by Original Provision Date
+    Create Pivot by Original Provision Date for current servers
     """
 
-    logging.info("Calculating vCPU by provision date.")
+    """ Query only virtual CPU,  VCPU metric and last month so it calculates current total VCPU """
+    servers = servers.query('service_id == "is.instance" and metric == "VCPU_HOURS" and month == @month')
 
-    vcpu = pd.pivot_table(servers, index=["region", "availability_zone", "instance_role", "instance_profile", "provision_date", "deprovision_date"],
+    logging.info("Calculating current Virtual Server vCPU by provision date.")
+
+    vcpu = pd.pivot_table(servers, index=["region", "availability_zone", "resource_group_name", "instance_role", "instance_profile", "provision_date", "deprovision_date"],
                                     values=["instance_id", "numberOfVirtualCPUs"],
                                     aggfunc={"instance_id": "nunique", "numberOfVirtualCPUs": np.sum},
+                                    margins=True, margins_name="Total",
                                     fill_value=0).rename(columns={'instance_id': 'instance_count'})
 
     new_order = ["instance_count", "numberOfVirtualCPUs"]
     vcpu = vcpu.reindex(new_order, axis=1)
-    vcpu.to_excel(writer, 'VPCProvisioningTab')
-    worksheet = writer.sheets['VPCProvisioningTab']
+    vcpu.to_excel(writer, '{}_VPC_VirtualCores'.format(month))
+    worksheet = writer.sheets['{}_VPC_VirtualCores'.format(month)]
     format2 = workbook.add_format({'align': 'left'})
     format3 = workbook.add_format({'num_format': '#,##0'})
-    worksheet.set_column("A:F", 30, format2)
-    worksheet.set_column("G:H", 18, format3)
+    worksheet.set_column("A:B", 15, format2)
+    worksheet.set_column("C:E", 30, format2)
+    worksheet.set_column("F:G", 18, format2)
+    worksheet.set_column("H:I", 18, format3)
+    return
+def createBMServerTab(servers, month):
+    """
+    Create BM VCPU deployed by role, account, and az
+    """
+
+    logging.info("Calculating Bare Metal CPU deployed.")
+    """ Query CPU,  VCPU metric and last month so it calculates current total VCPU """
+    servers = servers.query('service_id == "is.bare-metal-server" and metric == "BARE_METAL_SERVER_HOURS" and month == @month')
+    vcpu = pd.pivot_table(servers, index=["region", "availability_zone", "resource_group_name", "instance_role", "instance_profile", "provision_date", "deprovision_date"],
+                                    values=["instance_id", "BMnumberofCores", "BMnumberofSockets"],
+                                    aggfunc={"instance_id": "nunique", "BMnumberofCores": np.sum, "BMnumberofSockets": np.sum},
+                                    margins=True, margins_name="Total",
+                                    fill_value=0).rename(columns={'instance_id': 'instance_count', "BMnumberofCores": "Cores", "BMnumberofSockets": "Sockets"})
+
+    new_order = ["instance_count", "Cores", "Sockets"]
+    vcpu = vcpu.reindex(new_order, axis=1)
+    vcpu.to_excel(writer, '{}_VPC_BareMetalCores'.format(month))
+    worksheet = writer.sheets['{}_VPC_BareMetalCores'.format(month)]
+    format2 = workbook.add_format({'align': 'left'})
+    format3 = workbook.add_format({'num_format': '#,##0'})
+    worksheet.set_column("A:B", 15, format2)
+    worksheet.set_column("C:E", 30, format2)
+    worksheet.set_column("F:G", 18, format2)
+    worksheet.set_column("H:J", 18, format3)
+    return
+def createVolumeTab(volumes, month):
+    """
+    Create BM VCPU deployed by role, account, and az
+    """
+
+    logging.info("Calculating VOLUMES deployed.")
+    """ Query """
+    volumes = volumes.query('metric == "GIGABYTE_HOURS" and month == @month')
+    volumes = pd.pivot_table(volumes, index=["region", "availability_zone", "resource_group_name", "instance_role", "provision_date", "deprovision_date"],
+                                    values=["instance_id", "capacity", "iops"],
+                                    aggfunc={"instance_id": "nunique", "capacity": np.sum, "iops": np.sum},
+                                    fill_value=0).rename(columns={'instance_id': 'instance_count'})
+
+    new_order = ["instance_count", "capacity", "iops"]
+    volumes = volumes.reindex(new_order, axis=1)
+    volumes.to_excel(writer, '{}_VPC_Volumes'.format(month))
+    worksheet = writer.sheets['{}_VPC_Volumes'.format(month)]
+    format2 = workbook.add_format({'align': 'left'})
+    format3 = workbook.add_format({'num_format': '#,##0'})
+    worksheet.set_column("A:B", 15, format2)
+    worksheet.set_column("C:E", 30, format2)
+    worksheet.set_column("F:F", 18, format2)
+    worksheet.set_column("G:J", 18, format3)
     return
 def multi_part_upload(bucket_name, item_name, file_path):
     try:
@@ -733,6 +815,7 @@ if __name__ == "__main__":
     parser.add_argument("--load", action=argparse.BooleanOptionalAction, help="load dataframes from pkl files for testing purposes.")
     parser.add_argument("--save", action=argparse.BooleanOptionalAction, help="Store dataframes to pkl files for testing purposes.")
     parser.add_argument("--months", default=os.environ.get('months', 1), help="Number of months including last full month to include in report.")
+    parser.add_argument("--vpc", action=argparse.BooleanOptionalAction, help="Include additional VPC analysis tabs.")
     parser.add_argument("-s", "--startdate", default=os.environ.get('startdate', None), help="Start Year & Month in format YYYY-MM")
     parser.add_argument("-e", "--enddate", default=os.environ.get('enddate', None), help="End Year & Month in format YYYY-MM")
     parser.add_argument("--cos", "--COS", action=argparse.BooleanOptionalAction, help="Write output to COS bucket destination specified.")
@@ -791,7 +874,6 @@ if __name__ == "__main__":
                 accountUsage.to_pickle("accountUsage.pkl")
                 instancesUsage.to_pickle("instanceUsage.pkl")
 
-    servers = instancesUsage.query('service_id == "is.instance" or service_id == "is.bare-metal-server"')
 
     """
     Write Dataframe to Excel Tabs (sheets)
@@ -802,8 +884,16 @@ if __name__ == "__main__":
     createInstancesDetailTab(instancesUsage)
     createUsageSummaryTab(accountUsage)
     createMetricSummary(accountUsage)
-    createVPCServerListTab(servers)
-    createVPCProvioningTab(servers)
+    if args.vpc:
+        """
+        Create VPC Related Tabs
+        """
+        servers = instancesUsage.query('service_id == "is.instance" or service_id == "is.bare-metal-server"')
+        createVPCServerListTab(servers)
+        createVirtualServerTab(servers, enddate.strftime("%Y-%m"))
+        createBMServerTab(servers, enddate.strftime("%Y-%m"))
+        storage = instancesUsage.query('service_id == "is.volume"')
+        createVolumeTab(storage, enddate.strftime("%Y-%m"))
     writer.close()
     """
     If SendGrid specified send email with generated file to email distribution list specified
