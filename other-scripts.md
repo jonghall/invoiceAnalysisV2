@@ -67,6 +67,8 @@ cost after discounts are applied.   In some rate occasions discounts are applied
    - ***Instance_detail*** is a table for the range of months specified for each unique service instance (ie in the case of VPC Virtual Servers each virtual server is listed).  Each row contains details on that instance included rated usage and cost.
    - ***Usage_Summary*** is a pivot table showing each month estimated cost for each service.  Note if current month included amount is month to date.
    - ***MetricPlanSummary*** is a pivot table showing each month estimated cost for each service and related usage metric.  Note if current month included amount is month to date.
+
+*Tabs included if --vpc specified*
    - ***YYYY-MM_VPC_VirtualCores*** is a pivot table of Virtual Cores deployed in VPC for the current month or if range specified, the last month specified.
-   - ***YYYY-MM_BareMetal_Cores*** is a pivot table of Bare Metal Cores and Sockets in VPC for the current month or if range specified, the last month specified.
+   - ***YYYY-MM_BareMetalCores*** is a pivot table of Bare Metal Cores and Sockets in VPC for the current month or if range specified, the last month specified.
    - ***YYYY-MM_Volumes*** is a pivot table of VPC Block Volumes Deployed for the current month or if range specified, the last month specified.
