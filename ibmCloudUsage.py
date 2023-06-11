@@ -347,34 +347,45 @@ def getInstancesUsage(start,end):
 
                 if "created_at" in resource_instance:
                     created_at = resource_instance["created_at"]
+                    """Create Provision Date Field using US East Timezone for Zulu conversion"""
+                    provisionDate = pd.to_datetime(created_at, format="%Y-%m-%dT%H:%M:%S.%f")
+                    provisionDate = provisionDate.strftime("%Y-%m-%d")
                 else:
                     created_at = ""
-
-                if "created_by" in resource_instance:
-                    created_by = resource_instance["created_by"]
-                else:
-                    created_by = ""
+                    provisionDate = ""
 
                 if "updated_at" in resource_instance:
                     updated_at = resource_instance["updated_at"]
                 else:
                     updated_at = ""
 
-                if "updated_by" in resource_instance:
-                    updated_by = resource_instance["updated_by"]
-                else:
-                    updated_by = ""
-
-
                 if "deleted_at" in resource_instance:
                     deleted_at = resource_instance["deleted_at"]
+                    """Create deProvision Date Field using US East Timezone for Zulu conversion"""
+                    if deleted_at != None:
+                        deprovisionDate = pd.to_datetime(deleted_at, format="%Y-%m-%dT%H:%M:%S.%f")
+                        deprovisionDate = deprovisionDate.strftime("%Y-%m-%d")
+                    else:
+                        deprovisionDate = ""
                 else:
                     deleted_at = ""
+                    deleted_by = ""
+                    deprovisionDate = ""
+
+                if "created_by" in resource_instance:
+                    created_by = resource_instance["created_by"]
+                else:
+                    created_by = ""
 
                 if "deleted_by" in resource_instance:
                     deleted_by = resource_instance["deleted_by"]
                 else:
                     deleted_by = ""
+
+                if "updated_by" in resource_instance:
+                    updated_by = resource_instance["updated_by"]
+                else:
+                    updated_by = ""
 
                 if "restored_at" in resource_instance:
                     restored_at = resource_instance["restored_at"]
@@ -395,18 +406,6 @@ def getInstancesUsage(start,end):
                     type = resource_instance["type"]
                 else:
                     type = ""
-
-                roks_cluster_id = ""
-                roks_cluster_name = ""
-                if type == "container_instance":
-                    if instance["plan_id"] == "containers.kubernetes.cluster.roks":
-                        """ This is the instance of the ROKS Cluster"""
-                        roks_cluster_id = instance["resource_instance_name"]
-                        roks_cluster_name =  instance["resource_instance_name"]
-                    elif instance["plan_id"] == "containers.kubernetes.vpc.gen2.roks":
-                        """ This is a worker instance """
-                        roks_cluster_id = instance["resource_instance_name"][0:instance["resource_instance_name"].find('_')]
-                        roks_cluster_name = instance["resource_instance_name"][0:instance["resource_instance_name"].find('_')]
 
                 """
                 For VPC Virtual Servers obtain intended profile and virtual server details
@@ -448,18 +447,18 @@ def getInstancesUsage(start,end):
                     role = ""
 
                 row_addition = {
+                    "provision_date": provisionDate,
                     "created_at": created_at,
                     "created_by": created_by,
                     "updated_at": updated_at,
                     "updated_by": updated_by,
+                    "deprovision_date": deprovisionDate,
                     "deleted_at": deleted_at,
                     "deleted_by": deleted_by,
                     "restored_at": restored_at,
                     "restored_by": restored_by,
                     "instance_state": state,
                     "type": type,
-                    "roks_cluster_id": roks_cluster_id,
-                    "roks_cluster_name": roks_cluster_name,
                     "instance_profile": profile,
                     "cpu_family": cpuFamily,
                     "numberOfVirtualCPUs": numberOfVirtualCPUs,
@@ -467,6 +466,7 @@ def getInstancesUsage(start,end):
                     "NodeName":  NodeName,
                     "NumberOfGPUs": NumberOfGPUs,
                     "NumberOfInstStorageDisks": NumberOfInstStorageDisks,
+                    "tags": tags,
                     "instance_role": role,
                     "availability_zone": az
                 }
@@ -529,10 +529,10 @@ def getInstancesUsage(start,end):
 
 
         instancesUsage = pd.DataFrame(data, columns=['account_id', "month", "service_name", "service_id", "instance_name","instance_id", "plan_name", "plan_id", "region", "pricing_region",
-                                                 "resource_group_name","resource_group_id", "billable", "pricing_country", "billing_country", "currency_code", "pricing_plan_id",
-                                                 "created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by", "restored_at", "restored_by", "instance_state", "type",
+                                                 "resource_group_name","resource_group_id", "billable", "pricing_country", "billing_country", "currency_code", "pricing_plan_id", "provision_date",
+                                                 "created_at", "created_by", "updated_at", "updated_by", "deprovision_date", "deleted_at", "deleted_by", "restored_at", "restored_by", "instance_state", "type",
                                                  "roks_cluster_id", "roks_cluster_name", "instance_profile", "cpu_family", "numberOfVirtualCPUs", "MemorySizeMiB", "NodeName", "NumberOfGPUs", "NumberOfInstStorageDisks", "availability_zone",
-                                                 "instance_role", "metric", "metric_name", "unit", "unit_name", "quantity", "cost", "rated_cost", "rateable_quantity", "price", "discount"])
+                                                 "tags", "instance_role", "metric", "metric_name", "unit", "unit_name", "quantity", "cost", "rated_cost", "rateable_quantity", "price", "discount"])
 
     return instancesUsage
 
@@ -612,35 +612,37 @@ def createMetricSummary(paasUsage):
     worksheet.set_column(4 + months, 4 + (months * 2), 18, format1)
     return
 
-def createClusterTab(instancesUsage):
+def createVPCServerListTab(servers):
     """
-    Create Pivot table for ROKS Clusters
+    Write Service Usage detail tab to excel
+    """
+    logging.info("Creating VPC Server Detail tab.")
+
+    servers.to_excel(writer, "VPCServerDetail")
+    worksheet = writer.sheets['VPCServerDetail']
+    totalrows,totalcols=servers.shape
+    worksheet.autofilter(0,0,totalrows,totalcols)
+    return
+def createVPCProvioningTab(servers):
+    """
+    Create Pivot by Original Provision Date
     """
 
-    workers = instancesUsage.query('(service_id == "containers-kubernetes" and plan_id == "containers.kubernetes.vpc.gen2.roks")')
-    if len(workers) > 0:
-        logging.info("Creating Cluster Pivot Tab.")
-        clusters = pd.pivot_table(workers, index=["region",  "roks_cluster_id", "instance_name", "plan_name", "metric_name", "unit_name"],
-                                        columns=["month"],
-                                        values=["quantity", "cost"],
-                                        aggfunc={"quantity": np.sum, "cost": np.sum},
-                                        fill_value=0)
+    logging.info("Calculating vCPU by provision date.")
 
-        new_order = ["quantity", "cost"]
-        clusters = clusters.reindex(new_order, axis=1, level=0)
-        clusters.to_excel(writer, 'ClusterDetail')
-        worksheet = writer.sheets['ClusterDetail']
-        format2 = workbook.add_format({'align': 'left'})
-        format1 = workbook.add_format({'num_format': '$#,##0.00'})
-        format3 = workbook.add_format({'num_format': '#,##0'})
-        worksheet.set_column("A:A", 18, format2)
-        worksheet.set_column("B:B", 30, format2)
-        worksheet.set_column("C:C", 70, format2)
-        worksheet.set_column("D:D", 50, format3)
-        worksheet.set_column("E:F", 25, format3)
-        months = len(workers.month.unique())
-        worksheet.set_column(6, 5 + months, 10, format3)
-        worksheet.set_column(6 + months, 6 + (months * 2), 12, format1)
+    vcpu = pd.pivot_table(servers, index=["region", "availability_zone", "instance_role", "instance_profile", "provision_date", "deprovision_date"],
+                                    values=["instance_id", "numberOfVirtualCPUs"],
+                                    aggfunc={"instance_id": "nunique", "numberOfVirtualCPUs": np.sum},
+                                    fill_value=0).rename(columns={'instance_id': 'instance_count'})
+
+    new_order = ["instance_count", "numberOfVirtualCPUs"]
+    vcpu = vcpu.reindex(new_order, axis=1)
+    vcpu.to_excel(writer, 'VPCProvisioningTab')
+    worksheet = writer.sheets['VPCProvisioningTab']
+    format2 = workbook.add_format({'align': 'left'})
+    format3 = workbook.add_format({'num_format': '#,##0'})
+    worksheet.set_column("A:F", 30, format2)
+    worksheet.set_column("G:H", 18, format3)
     return
 def multi_part_upload(bucket_name, item_name, file_path):
     try:
@@ -789,6 +791,8 @@ if __name__ == "__main__":
                 accountUsage.to_pickle("accountUsage.pkl")
                 instancesUsage.to_pickle("instanceUsage.pkl")
 
+    servers = instancesUsage.query('service_id == "is.instance" or service_id == "is.bare-metal-server"')
+
     """
     Write Dataframe to Excel Tabs (sheets)
     """
@@ -798,6 +802,8 @@ if __name__ == "__main__":
     createInstancesDetailTab(instancesUsage)
     createUsageSummaryTab(accountUsage)
     createMetricSummary(accountUsage)
+    createVPCServerListTab(servers)
+    createVPCProvioningTab(servers)
     writer.close()
     """
     If SendGrid specified send email with generated file to email distribution list specified
