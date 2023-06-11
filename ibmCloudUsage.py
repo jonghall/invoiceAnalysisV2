@@ -54,26 +54,26 @@ def getAccountId(IC_API_KEY):
         ).get_result()
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
-        quit()
+        quit(1)
 
     return api_key["account_id"]
 def createSDK(IC_API_KEY):
     """
-       Create SDK clients
-       """
+    Create SDK clients
+    """
     global usage_reports_service, resource_controller_service, iam_identity_service, global_search_service
 
     try:
         authenticator = IAMAuthenticator(IC_API_KEY)
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
-        quit()
+        quit(1)
 
     try:
         iam_identity_service = IamIdentityV1(authenticator=authenticator)
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
-        quit()
+        quit(1)
 
     try:
 
@@ -82,7 +82,7 @@ def createSDK(IC_API_KEY):
         usage_reports_service.set_http_config({'timeout': 120})
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
-        quit()
+        quit(1)
 
     try:
         resource_controller_service = ResourceControllerV2(authenticator=authenticator)
@@ -90,7 +90,7 @@ def createSDK(IC_API_KEY):
         resource_controller_service.set_http_config({'timeout': 120})
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
-        quit()
+        quit(1)
 
     try:
         global_search_service = GlobalSearchV2(authenticator=authenticator)
@@ -98,7 +98,7 @@ def createSDK(IC_API_KEY):
         global_search_service.set_http_config({'timeout': 120})
     except ApiException as e:
         logging.error("API exception {}.".format(str(e)))
-        quit()
+        quit(1)
 def prePopulateTagCache():
     """
     Pre Populate Tagging data into cache
@@ -144,10 +144,8 @@ def prePopulateResourceCache():
             all_results.extend(next_page)
         logging.debug("resource_instance={}".format(all_results))
     except ApiException as e:
-        logging.error(
-            "API Error.  Can not retrieve instances of type {} {}: {}".format(resource_type, str(e.code),
-                                                                              e.message))
-        quit()
+        logging.error("API Error.  Can not retrieve instances from controller {}: {}".format(str(e.code),e.message))
+        quit(1)
 
     resource_cache = {}
     for resource in all_results:
@@ -178,7 +176,7 @@ def getAccountUsage(start, end):
                 continue
             else:
                 logging.error("API exception {}.".format(str(e)))
-                quit()
+                quit(1)
 
         logging.debug("usage {}={}".format(usageMonth, usage))
         for resource in usage['resources']:
@@ -277,7 +275,7 @@ def getInstancesUsage(start,end):
                 billingmonth=usageMonth, names=True, limit=limit).get_result()
         except ApiException as e:
             logging.error("Fatal Error with get_resource_usage_account: {}".format(e))
-            quit()
+            quit(1)
 
         recordstart = 1
         if recordstart + limit > instances_usage["count"]:
@@ -517,7 +515,7 @@ def getInstancesUsage(start,end):
                         billingmonth=usageMonth, names=True,limit=limit, start=nextoffset).get_result()
                 except ApiException as e:
                     logging.error("Error with get_resource_usage_account: {}".format(e))
-                    quit()
+                    quit(1)
 
                 if "next" in instances_usage:
                     nextoffset = instances_usage["next"]["offset"]
@@ -666,8 +664,10 @@ def multi_part_upload(bucket_name, item_name, file_path):
         logging.info("Transfer for {0} complete".format(item_name))
     except ClientError as be:
         logging.error("CLIENT ERROR: {0}".format(be))
+        quit(1)
     except Exception as e:
         logging.error("Unable to complete multi-part upload: {0}".format(e))
+        quit(1)
     return
 
 if __name__ == "__main__":
@@ -678,24 +678,38 @@ if __name__ == "__main__":
     parser.add_argument("--output", default=os.environ.get('output', 'ibmCloudUsage.xlsx'), help="Filename Excel output file. (including extension of .xlsx)")
     parser.add_argument("--load", action=argparse.BooleanOptionalAction, help="load dataframes from pkl files.")
     parser.add_argument("--save", action=argparse.BooleanOptionalAction, help="Store dataframes to pkl files.")
-    parser.add_argument("--start", help="Start Month YYYY-MM.")
-    parser.add_argument("--end", help="End Month YYYY-MM.")
+    parser.add_argument("--months", default=os.environ.get('months', 1), help="Number of months including last full month to include in report.")
+    parser.add_argument("-s", "--startdate", default=os.environ.get('startdate', None), help="Start Year & Month in format YYYY-MM")
+    parser.add_argument("-e", "--enddate", default=os.environ.get('enddate', None), help="End Year & Month in format YYYY-MM")
     parser.add_argument("--cos", "--COS", action=argparse.BooleanOptionalAction, help="Write output to COS bucket destination specified.")
     parser.add_argument("--COS_APIKEY", default=os.environ.get('COS_APIKEY', None), help="COS apikey to use for Object Storage.")
     parser.add_argument("--COS_ENDPOINT", default=os.environ.get('COS_ENDPOINT', None), help="COS endpoint to use for Object Storage.")
     parser.add_argument("--COS_INSTANCE_CRN", default=os.environ.get('COS_INSTANCE_CRN', None), help="COS Instance CRN to use for file upload.")
     parser.add_argument("--COS_BUCKET", default=os.environ.get('COS_BUCKET', None), help="COS Bucket name to use for file upload.")
     args = parser.parse_args()
-    start = datetime.strptime(args.start, "%Y-%m")
-    end = datetime.strptime(args.end, "%Y-%m")
+
+    """
+    Parse Date Parameters
+    For IBM Cloud Usage using actual Months - If current month included month to date usage included.
+    """
+    
+    if args.startdate == None or args.enddate == None:
+        months = int(args.months)
+        dallas = tz.gettz('US/Central')
+        enddate = datetime.today().astimezone(dallas)
+        startdate = enddate - relativedelta(months=months - 1)
+    else:
+        startdate = datetime.strptime(args.startdate, "%Y-%m")
+        enddate = datetime.strptime(args.enddate, "%Y-%m")
+
     if args.load:
         logging.info("Retrieving Usage and Instance data stored data")
         accountUsage = pd.read_pickle("accountUsage.pkl")
         instancesUsage = pd.read_pickle("instanceUsage.pkl")
     else:
         if args.apikey == None:
-                logging.error("You must provide IBM Cloud ApiKey with view access to usage reporting.")
-                quit()
+            logging.error("You must provide IBM Cloud ApiKey with view access to usage reporting.")
+            quit(1)
         else:
             apikey = args.apikey
             instancesUsage = pd.DataFrame()
@@ -712,14 +726,16 @@ if __name__ == "__main__":
             logging.info("Retrieving Usage and Instance data from AccountId: {}.".format(accountId))
 
             # Get Usage Data via API
-            accountUsage = pd.concat([accountUsage, getAccountUsage(start, end)])
-            instancesUsage = pd.concat([instancesUsage, getInstancesUsage(start, end)])
+            accountUsage = pd.concat([accountUsage, getAccountUsage(startdate, enddate)])
+            instancesUsage = pd.concat([instancesUsage, getInstancesUsage(startdate, enddate)])
 
             if args.save:
                 accountUsage.to_pickle("accountUsage.pkl")
                 instancesUsage.to_pickle("instanceUsage.pkl")
 
-    # Write dataframe to excel
+    """
+    Write Dataframe to Excel Tabs (sheets)
+    """
     writer = pd.ExcelWriter(args.output, engine='xlsxwriter')
     workbook = writer.book
     createServiceDetail(accountUsage)
@@ -727,6 +743,9 @@ if __name__ == "__main__":
     createUsageSummaryTab(accountUsage)
     createMetricSummary(accountUsage)
     writer.close()
+    """
+    If Cloud Object Storage specified copy generated file to bucket.
+    """
     if args.cos:
         cos = ibm_boto3.resource("s3",
                                  ibm_api_key_id=args.COS_APIKEY,
@@ -735,4 +754,4 @@ if __name__ == "__main__":
                                  endpoint_url=args.COS_ENDPOINT
                                  )
         multi_part_upload(args.COS_BUCKET, args.output, "./" + args.output)
-    logging.info("Usage Report is complete.")
+    logging.info("Usage Report generation of {} file is complete.".format(args.output))
