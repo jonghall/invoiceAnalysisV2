@@ -639,17 +639,6 @@ def createMetricSummary(paasUsage):
     worksheet.set_column(4 + months, 4 + (months * 2), 18, format1)
     return
 
-def createVPCServerListTab(servers):
-    """
-    Write Service Usage detail tab to excel
-    """
-    logging.info("Creating VPC Server Detail tab.")
-
-    servers.to_excel(writer, "VPC_Servers")
-    worksheet = writer.sheets['VPC_Servers']
-    totalrows,totalcols=servers.shape
-    worksheet.autofilter(0,0,totalrows,totalcols)
-    return
 def createVirtualServerTab(servers, month):
     """
     Create Pivot by Original Provision Date for current servers
@@ -889,7 +878,6 @@ if __name__ == "__main__":
         Create VPC Related Tabs
         """
         servers = instancesUsage.query('service_id == "is.instance" or service_id == "is.bare-metal-server"')
-        createVPCServerListTab(servers)
         createVirtualServerTab(servers, enddate.strftime("%Y-%m"))
         createBMServerTab(servers, enddate.strftime("%Y-%m"))
         storage = instancesUsage.query('service_id == "is.volume"')
