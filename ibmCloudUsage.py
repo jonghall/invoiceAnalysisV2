@@ -22,6 +22,10 @@ import numpy as np
 from datetime import datetime
 from dateutil.relativedelta import *
 from dateutil import tz
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import (
+    Mail, Personalization, Email, Attachment, FileContent, FileName,
+    FileType, Disposition, ContentId)
 import ibm_boto3
 from ibm_botocore.client import Config, ClientError
 from ibm_platform_services import IamIdentityV1, UsageReportsV4, GlobalTaggingV1, GlobalSearchV2
@@ -670,6 +674,55 @@ def multi_part_upload(bucket_name, item_name, file_path):
         quit(1)
     return
 
+def sendEmail(startdate, enddate, sendGridTo, sendGridFrom, sendGridSubject, sendGridApi, outputname):
+    """
+    Semd a file via SendGrid mail service
+    :param startdate: Start month of report
+    :param enddate:  End month of report
+    :param sendGridTo: Email distribution list
+    :param sendGridFrom:  Email for from
+    :param sendGridSubject: Subject of email
+    :param sendGridApi: apikey to use for SendGrid account
+    :param outputname: file to send.
+    :return:
+    """
+
+    html = ("<p><b>IBM Cloud Usage Output Attached for months {} to {} </b></br></p>".format(datetime.strftime(startdate, "%Y-%m"), datetime.strftime(enddate, "%Y-%m")))
+
+    to_list = Personalization()
+    for email in sendGridTo.split(","):
+        to_list.add_to(Email(email))
+
+    message = Mail(
+        from_email=sendGridFrom,
+        subject=sendGridSubject,
+        html_content=html
+    )
+
+    message.add_personalization(to_list)
+
+    # create attachment from file
+    file_path = os.path.join("./", outputname)
+    with open(file_path, 'rb') as f:
+        data = f.read()
+        f.close()
+    encoded = base64.b64encode(data).decode()
+    attachment = Attachment()
+    attachment.file_content = FileContent(encoded)
+    attachment.file_type = FileType('application/xlsx')
+    attachment.file_name = FileName(outputname)
+    attachment.disposition = Disposition('attachment')
+    attachment.content_id = ContentId('invoiceAnalysis')
+    message.attachment = attachment
+    try:
+        sg = SendGridAPIClient(sendGridApi)
+        response = sg.send(message)
+        logging.info("Email Send succesfull to {}, status code = {}.".format(sendGridTo,response.status_code))
+    except Exception as e:
+        logging.error("Email Send Error, status code = %s." % e.to_dict)
+        quit(1)
+    return
+
 if __name__ == "__main__":
     setup_logging()
     load_dotenv()
@@ -686,6 +739,10 @@ if __name__ == "__main__":
     parser.add_argument("--COS_ENDPOINT", default=os.environ.get('COS_ENDPOINT', None), help="COS endpoint to use for Object Storage.")
     parser.add_argument("--COS_INSTANCE_CRN", default=os.environ.get('COS_INSTANCE_CRN', None), help="COS Instance CRN to use for file upload.")
     parser.add_argument("--COS_BUCKET", default=os.environ.get('COS_BUCKET', None), help="COS Bucket name to use for file upload.")
+    parser.add_argument("--sendGridApi", default=os.environ.get('sendGridApi', None), help="SendGrid ApiKey used to email output.")
+    parser.add_argument("--sendGridTo", default=os.environ.get('sendGridTo', None), help="SendGrid comma deliminated list of emails to send output to.")
+    parser.add_argument("--sendGridFrom", default=os.environ.get('sendGridFrom', None), help="Sendgrid from email to send output from.")
+    parser.add_argument("--sendGridSubject", default=os.environ.get('sendGridSubject', None), help="SendGrid email subject for output email")
     args = parser.parse_args()
 
     """
@@ -744,6 +801,12 @@ if __name__ == "__main__":
     createMetricSummary(accountUsage)
     writer.close()
     """
+    If SendGrid specified send email with generated file to email distribution list specified
+    """
+    if args.sendGridApi != None:
+        sendEmail(startdate, enddate, args.sendGridTo, args.sendGridFrom, args.sendGridSubject, args.sendGridApi, args.output)
+
+    """
     If Cloud Object Storage specified copy generated file to bucket.
     """
     if args.cos:
@@ -754,4 +817,5 @@ if __name__ == "__main__":
                                  endpoint_url=args.COS_ENDPOINT
                                  )
         multi_part_upload(args.COS_BUCKET, args.output, "./" + args.output)
+
     logging.info("Usage Report generation of {} file is complete.".format(args.output))
