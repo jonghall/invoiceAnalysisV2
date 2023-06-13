@@ -1499,7 +1499,4 @@ if __name__ == "__main__":
                                  )
         multi_part_upload(args.COS_BUCKET, args.output, "./" + args.output)
 
-    if args.sendGridApi != None or args.COS_APIKEY != None:
-        logging.info("Deleting {} local file.".format(args.output))
-        os.remove("./"+args.output)
     logging.info("invoiceAnalysis complete.")
