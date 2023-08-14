@@ -647,7 +647,7 @@ def createChargesbyServer(servers, month):
     """ Query only virtual CPU,  VCPU metric and last month so it calculates current total VCPU """
 
     logging.info("Calculating total charges per server.")
-
+    servers = servers.query('month == @month')
     vcpu = pd.pivot_table(servers, index=["region", "service_name", "instance_role", "instance_name", "instance_id", "instance_profile"],
                                     values=["rated_cost", "cost"],
                                     aggfunc={"rated_cost": np.sum, "cost": np.sum},
