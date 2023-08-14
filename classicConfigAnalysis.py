@@ -54,8 +54,8 @@ def getinventory():
 
     while True:
         hardwarelist = client['Account'].getHardware(id=ims_account, limit=limit, offset=offset, mask='datacenter,datacenterName,motherboard,processors,networkVlans,backendRouters,frontendRouters,backendNetworkComponentCount,backendNetworkComponents,'\
-                'backendNetworkComponents.router,backendNetworkComponents.router.primaryIpAddress,backendNetworkComponents.uplinkComponent,frontendNetworkComponentCount,frontendNetworkComponents,frontendNetworkComponents.router,'
-                'frontendNetworkComponents.router.primaryIpAddress,frontendNetworkComponents.uplinkComponent,uplinkNetworkComponents,networkGatewayMemberFlag,softwareComponents,frontendNetworkComponents.duplexMode,backendNetworkComponents.duplexMode')
+                'backendNetworkComponents.router,backendNetworkComponents.router.primaryIpAddress,backendNetworkComponents.uplinkComponent,backendNetworkComponents.primarySubnet,frontendNetworkComponentCount,frontendNetworkComponents,frontendNetworkComponents.router,'
+                'frontendNetworkComponents.router.primaryIpAddress,frontendNetworkComponents.uplinkComponent,frontendNetworkComponents.primarySubnet,uplinkNetworkComponents,networkGatewayMemberFlag,softwareComponents,frontendNetworkComponents.duplexMode,backendNetworkComponents.duplexMode')
 
         logging.info("Requesting Hardware for account {}, limit={} @ offset {}, returned={}".format(ims_account, limit, offset, len(hardwarelist)))
         if len(hardwarelist) == 0:
@@ -84,6 +84,8 @@ def getinventory():
                     # Get trunked vlans because relational item doesn't return correctly
                     backendnetworkcomponent['networkVlanTrunks'] = client['Network_Component'].getNetworkVlanTrunks(mask='networkVlan', id=backendnetworkcomponent['uplinkComponent']['id'])
                     backendnetworkcomponents.append(backendnetworkcomponent)
+                    if "primarySubnet" in backend:
+                        backend_primarySubnet = ("{}/{}".format(backend["primarySubnet"]["networkIdentifier"], backend["primarySubnet"]["cidr"]))
 
             # FIND INFORMATION ABOUT PUBLIC (FRONTEND) INTERFACES
             frontendnetworkcomponents = []
@@ -91,6 +93,9 @@ def getinventory():
                 if frontend['name'] == "eth":
                     frontendnetworkcomponent = frontend
                     frontendnetworkcomponents.append(frontendnetworkcomponent)
+                if "primarySubnet" in frontend:
+                    frontend_primarySubnet = (
+                        "{}/{}".format(frontend["primarySubnet"]["networkIdentifier"], frontend["primarySubnet"]["cidr"]))
 
             # Get operating system from software components
             if "softwareComponents" in hardware:
@@ -170,7 +175,7 @@ def getinventory():
                             if 'vrfDefinitionId' in networkvlan: network[interface+'_vrfId'] = networkvlan['vrfDefinitionId']
                 else:
                     logging.error("No vlans hwardware:{}".format(hardware))
-
+                network['frontend_primarySubnet'] = frontend_primarySubnet
                 output.update(network)
 
             """
@@ -210,6 +215,7 @@ def getinventory():
 
                 if 'primaryIpAddress' in backendnetworkcomponent['router']:
                     network[interface+'_router_ip'] = backendnetworkcomponent['router']['primaryIpAddress']
+                network['backend_primarySubnet'] = backend_primarySubnet
                 output.update(network)
 
                 """
@@ -310,6 +316,8 @@ def getinventory():
         "manufacturerSerialNumber",
         "provisionDate",
         "notes",
+        "backend_primarySubnet",
+        "frontend_primarySubnet",
         "eth1_mac",
         "eth1_primaryIpAddress",
         "eth1_speed",
@@ -446,6 +454,41 @@ def createHWDetail(hardware_df):
     worksheet.autofilter(0,0,totalrows,totalcols)
     return
 
+def createPrivateSubnetPivot(hardware_df):
+    """
+    Create a Pivot of Servers by Processor type
+    """
+
+    logging.info("Creating private subnet pivot table.")
+    processor = pd.pivot_table(hardware_df, index=["datacenterName", "backend_primarySubnet", "eth0_vlan", "eth0_vlanName"],
+                               values=["id"],
+                               aggfunc={"id": "nunique"}, margins=True, margins_name="Count", fill_value=0).rename(columns={'id': 'Total Count'})
+    processor.to_excel(writer, 'PrivateSubnetPivot')
+    worksheet = writer.sheets['PrivateSubnetPivot']
+    leftformat = workbook.add_format({'align': 'left'})
+    format1 = workbook.add_format({'num_format': '#,##0'})
+    worksheet.set_column("A:A", 20, leftformat)
+    worksheet.set_column("B:B", 60, leftformat)
+    worksheet.set_column("C:C", 10, format1)
+    return
+
+def createPublicSubnetPivot(hardware_df):
+    """
+    Create a Pivot of Servers by Processor type
+    """
+
+    logging.info("Creating publicsubnet pivot table.")
+    processor = pd.pivot_table(hardware_df, index=["datacenterName", "frontend_primarySubnet", "eth1_vlan", "eth1_vlanName"],
+                               values=["id"],
+                               aggfunc={"id": "nunique"}, margins=True, margins_name="Count", fill_value=0).rename(columns={'id': 'Total Count'})
+    processor.to_excel(writer, 'PublicSubnetPivot')
+    worksheet = writer.sheets['PublicSubnetPivot']
+    leftformat = workbook.add_format({'align': 'left'})
+    format1 = workbook.add_format({'num_format': '#,##0'})
+    worksheet.set_column("A:A", 20, leftformat)
+    worksheet.set_column("B:B", 60, leftformat)
+    worksheet.set_column("C:C", 10, format1)
+    return
 def createProcessorPivot(hardware_df):
     """
     Create a Pivot of Servers by Processor type
@@ -638,10 +681,9 @@ if __name__ == "__main__":
             ims_account = None
 
             # Change endpoint to private Endpoint if command line open chosen
-            if args.SL_PRIVATE:
-                SL_ENDPOINT = "https://api.service.softlayer.com/xmlrpc/v3.1"
-            else:
-                SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
+
+
+            SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
 
             # Create Classic infra API client
             client = SoftLayer.Client(username="apikey", api_key=IC_API_KEY, endpoint_url=SL_ENDPOINT)
@@ -663,9 +705,11 @@ if __name__ == "__main__":
     workbook = writer.book
 
     createHWDetail(hardware_df)
-    createVlanDetail(trunkedvlan_df)
-    createServersByTrunkedVlan(trunkedvlan_df)
-    createTaggedVlanbyServersPivot(trunkedvlan_df)
+    #createVlanDetail(trunkedvlan_df)
+    #createServersByTrunkedVlan(trunkedvlan_df)
+    #createTaggedVlanbyServersPivot(trunkedvlan_df)
+    createPrivateSubnetPivot(hardware_df)
+    createPublicSubnetPivot(hardware_df)
     createProcessorPivot(hardware_df)
     createMotherboardPivot(hardware_df)
     createHostsByDatePivot(hardware_df)

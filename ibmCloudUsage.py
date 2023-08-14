@@ -248,10 +248,10 @@ def getInstancesUsage(start,end):
         """
         Check Cache for Resource Details which may have been retrieved previously
         """
-        if resourceId not in resource_cache:
+        if resourceId not in resource_controller_cache:
             logging.debug("Cache miss for Resource {}".format(resourceId))
-            resource_cache[resourceId] = getResourceInstancefromCloud(resourceId)
-        return resource_cache[resourceId]
+            resource_controller_cache[resourceId] = getResourceInstancefromCloud(resourceId)
+        return resource_controller_cache[resourceId]
 
     def getTags(resourceId):
         """
@@ -639,6 +639,35 @@ def createMetricSummary(paasUsage):
     worksheet.set_column(4 + months, 4 + (months * 2), 18, format1)
     return
 
+def createChargesbyServer(servers, month):
+    """
+    Create Pivot by Server for current month (consolidate metrics)
+    """
+
+    """ Query only virtual CPU,  VCPU metric and last month so it calculates current total VCPU """
+
+    logging.info("Calculating total charges per server.")
+
+    vcpu = pd.pivot_table(servers, index=["region", "service_name", "instance_role", "instance_name", "instance_id", "instance_profile"],
+                                    values=["rated_cost", "cost"],
+                                    aggfunc={"rated_cost": np.sum, "cost": np.sum},
+                                    margins=True, margins_name="Total",
+                                    fill_value=0)
+
+    new_order = ["rated_cost", "cost"]
+    vcpu = vcpu.reindex(new_order, axis=1)
+    vcpu.to_excel(writer, '{}_VPC_Server_Charges'.format(month))
+    worksheet = writer.sheets['{}_VPC_Server_Charges'.format(month)]
+    format2 = workbook.add_format({'align': 'left'})
+    format3 = workbook.add_format({'num_format': '#,##0'})
+    format4 = workbook.add_format({'num_format': '$#,##0.00'})
+    worksheet.set_column("A:A", 15, format2)
+    worksheet.set_column("B:B", 25, format2)
+    worksheet.set_column("C:C", 15, format2)
+    worksheet.set_column("D:E", 120, format2)
+    worksheet.set_column("F:F", 20, format2)
+    worksheet.set_column("G:H", 18, format4)
+    return
 def createVirtualServerTab(servers, month):
     """
     Create Pivot by Original Provision Date for current servers
@@ -700,20 +729,22 @@ def createVolumeTab(volumes, month):
     """ Query """
     volumes = volumes.query('metric == "GIGABYTE_HOURS" and month == @month')
     volumes = pd.pivot_table(volumes, index=["region", "availability_zone", "resource_group_name", "instance_role", "provision_date", "deprovision_date"],
-                                    values=["instance_id", "capacity", "iops"],
-                                    aggfunc={"instance_id": "nunique", "capacity": np.sum, "iops": np.sum},
+                                    values=["instance_id", "capacity", "iops", "cost", "rated_cost"],
+                                    aggfunc={"instance_id": "nunique", "capacity": np.sum, "iops": np.sum, "cost": np.sum, "rated_cost": np.sum},
                                     fill_value=0).rename(columns={'instance_id': 'instance_count'})
 
-    new_order = ["instance_count", "capacity", "iops"]
+    new_order = ["instance_count", "capacity", "iops", "rated_cost", "cost"]
     volumes = volumes.reindex(new_order, axis=1)
     volumes.to_excel(writer, '{}_VPC_Volumes'.format(month))
     worksheet = writer.sheets['{}_VPC_Volumes'.format(month)]
     format2 = workbook.add_format({'align': 'left'})
     format3 = workbook.add_format({'num_format': '#,##0'})
+    format4 = workbook.add_format({'num_format': '$#,##0.00'})
     worksheet.set_column("A:B", 15, format2)
     worksheet.set_column("C:E", 30, format2)
     worksheet.set_column("F:F", 18, format2)
-    worksheet.set_column("G:J", 18, format3)
+    worksheet.set_column("G:I", 18, format3)
+    worksheet.set_column("J:K", 18, format4)
     return
 def multi_part_upload(bucket_name, item_name, file_path):
     try:
@@ -852,7 +883,7 @@ if __name__ == "__main__":
             Pre-populate Account Data to accelerate report generation
             """
             tag_cache = prePopulateTagCache()
-            resource_cache = prePopulateResourceCache()
+            resource_controller_cache = prePopulateResourceCache()
 
             logging.info("Retrieving Usage and Instance data from AccountId: {}.".format(accountId))
 
@@ -879,6 +910,7 @@ if __name__ == "__main__":
         Create VPC Related Tabs
         """
         servers = instancesUsage.query('service_id == "is.instance" or service_id == "is.bare-metal-server"')
+        createChargesbyServer(servers,enddate.strftime("%Y-%m"))
         createVirtualServerTab(servers, enddate.strftime("%Y-%m"))
         createBMServerTab(servers, enddate.strftime("%Y-%m"))
         storage = instancesUsage.query('service_id == "is.volume"')

@@ -111,10 +111,8 @@ if __name__ == "__main__":
         ims_account = None
 
         # Change endpoint to private Endpoint if command line open chosen
-        if args.SL_PRIVATE:
-            SL_ENDPOINT = "https://api.service.softlayer.com/xmlrpc/v3.1"
-        else:
-            SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
+
+        SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
 
         # Create Classic infra API client
         client = SoftLayer.Client(username="apikey", api_key=IC_API_KEY, endpoint_url=SL_ENDPOINT)
