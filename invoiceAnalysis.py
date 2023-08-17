@@ -160,6 +160,7 @@ def parseChildren(row, parentDescription, children):
             row["INV_PRODID"] = ""
             row["INV_DIV"] = ""
             row["PLAN_ID"] = ""
+            row["attributes"] = ""
             if "attributes" in child["product"]:
                 for attr in child["product"]["attributes"]:
                     if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
@@ -168,11 +169,7 @@ def parseChildren(row, parentDescription, children):
                         row["INV_DIV"] = attr["value"]
                     elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                         row["PLAN_ID"] = attr["value"]
-                    elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_FEATURE_ID":
-                        continue
-                    else:
-                        logging.error("Unknown attribute: {}".format(attr))
-                        quit(1)
+                    row["attributes"] = attr
             # write child record
             data.append(row.copy())
             logging.debug("child {} {} {} RecurringFee: {}".format(row["childBillingItemId"], row["INV_PRODID"], row["Description"],
@@ -370,6 +367,7 @@ def getInvoiceDetail(startdate, enddate):
                 INV_PRODID = ""
                 INV_DIV = ""
                 PLAN_ID = ""
+                attributes = ""
                 if "attributes" in item["product"]:
                     for attr in item["product"]["attributes"]:
                         if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
@@ -378,13 +376,7 @@ def getInvoiceDetail(startdate, enddate):
                             INV_DIV = attr["value"]
                         elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                             PLAN_ID = attr["value"]
-                        elif attr["attributeType"]["keyName"] == "SUPPORT_PREMIUM":
-                            continue
-                        elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_FEATURE_ID":
-                            continue
-                        else:
-                            logging.error("Unknown attribute: {}".format(attr))
-                            quit()
+                        attributes = attr
 
                 # If Hourly calculate hourly rate and total hours
                 if item["hourlyFlag"]:
@@ -516,6 +508,7 @@ def getInvoiceDetail(startdate, enddate):
                        'INV_PRODID': INV_PRODID,
                        'INV_DIV': INV_DIV,
                        'PLAN_ID': PLAN_ID,
+                       'attributes': attributes
                         }
                 if storageFlag:
                     row["storage_notes"] = storage_notes
@@ -563,7 +556,8 @@ def getInvoiceDetail(startdate, enddate):
                'childTotalRecurringCharge',
                'INV_PRODID',
                'INV_DIV',
-               'PLAN_ID']
+               'PLAN_ID',
+               "attributes"]
     if storageFlag:
         columns.append("storage_notes")
 
