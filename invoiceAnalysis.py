@@ -1158,7 +1158,7 @@ def createType2Report(filename, classicUsage):
 
         months = classicUsage.IBM_Invoice_Month.unique()
         for i in months:
-            logging.info("Creating IaaS CFTS Invoice Top Sheet tab for {}.".format(i))
+            logging.info("Creating CFTS Invoice Top Sheet tab for {}.".format(i))
 
             if len(classicUsage) > 0:
                 """Get all the PaaS records with d-code INV_PRODID and not on the PaaS Invoice"""
@@ -1173,24 +1173,25 @@ def createType2Report(filename, classicUsage):
                 iaasRecords = classicUsage.query(
                     '(RecordType == ["Child"] and TaxCategory == ["PaaS"] and INV_PRODID == [""] and IBM_Invoice_Month == @i) or (IBM_Invoice_Month == @i and RecordType == ["Parent"] and (TaxCategory == ["IaaS"] or TaxCategory == ["HELP DESK"]) and totalAmount > 0)').copy()
 
-                allcharges = classicUsage.query(
-                    'IBM_Invoice_Month == @i and (Type == "NEW" or Type == "ONE-TIME-CHARGE" or Type == "RECURRING") and (TaxCategory == "IaaS" or TaxCategory == "HELP DESK")').copy()
+                #allcharges = classicUsage.query(
+                #    'IBM_Invoice_Month == @i and (Type == "NEW" or Type == "ONE-TIME-CHARGE" or Type == "RECURRING") and (TaxCategory == "IaaS" or TaxCategory == "HELP DESK")').copy()
 
 
-                """ Get OS license charges and remove OS charge from Parent record """
-                osRecords = classicUsage.query('IBM_Invoice_Month == @i and RecordType == "Child" and Category == "Operating System" and totalAmount > 0').copy()
-                for index, row in osRecords.iterrows():
-                    billingItemId = row["BillingItemId"]
-                    osTotalAmount = row["totalAmount"]
-                    for index1, row1 in iaasRecords.iterrows():
-                        if row1["BillingItemId"] == billingItemId and row1["RecordType"] == "Parent":
-                            iaasRecords.at[index1,"totalAmount"] = row1["totalAmount"] - osTotalAmount
+                #""" Get OS license charges and remove OS charge from Parent record """
+                #osRecords = classicUsage.query('IBM_Invoice_Month == @i and RecordType == "Child" and Category == "Operating System" and totalAmount > 0').copy()
+                #for index, row in osRecords.iterrows():
+                #    billingItemId = row["BillingItemId"]
+                #    osTotalAmount = row["totalAmount"]
+                #    for index1, row1 in iaasRecords.iterrows():
+                #        if row1["BillingItemId"] == billingItemId and row1["RecordType"] == "Parent":
+                #            iaasRecords.at[index1,"totalAmount"] = row1["totalAmount"] - osTotalAmount
 
                 """ FOr classic create new column named lineItemCategory for table based on Category"""
                 iaasRecords["lineItemCategory"] = iaasRecords["Category"]
-                osRecords["lineItemCategory"] = osRecords["Category"]
+                #osRecords["lineItemCategory"] = osRecords["Category"]
 
-                combined = pd.concat([childRecords,iaasRecords,osRecords])
+                #combined = pd.concat([childRecords,iaasRecords,osRecords])
+                combined = pd.concat([childRecords, iaasRecords])
 
                 """Fix non-descriptive IaaS records or situations where single d-code covers multiple child records so table groups and sums consistent with Invoice lineitems"""
                 for index, row in combined.iterrows():
