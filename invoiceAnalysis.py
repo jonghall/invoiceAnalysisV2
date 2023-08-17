@@ -165,9 +165,9 @@ def parseChildren(row, parentDescription, children):
                 for attr in child["product"]["attributes"]:
                     if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
                         row["INV_PRODID"] = attr["value"]
-                    elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
+                    if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
                         row["INV_DIV"] = attr["value"]
-                    elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
+                    if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                         row["PLAN_ID"] = attr["value"]
                     row["attributes"] = attr
             # write child record
@@ -372,9 +372,9 @@ def getInvoiceDetail(startdate, enddate):
                     for attr in item["product"]["attributes"]:
                         if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
                             INV_PRODID = attr["value"]
-                        elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
+                        if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
                             INV_DIV = attr["value"]
-                        elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
+                        if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                             PLAN_ID = attr["value"]
                         attributes = attr
 
