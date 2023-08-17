@@ -102,7 +102,7 @@ def getInvoiceList(startdate, enddate):
         })
     except SoftLayer.SoftLayerAPIError as e:
         logging.error("Account::getInvoices: %s, %s" % (e.faultCode, e.faultString))
-        quit()
+        quit(1)
     logging.debug("getInvoiceList account {}: {}".format(ims_account,invoiceList))
     logging.info("IBM Cloud account {}".format(invoiceList[0]["accountId"]))
     return invoiceList
@@ -164,11 +164,15 @@ def parseChildren(row, parentDescription, children):
                 for attr in child["product"]["attributes"]:
                     if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
                         row["INV_PRODID"] = attr["value"]
-                    if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
+                    elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
                         row["INV_DIV"] = attr["value"]
-                    if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
+                    elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                         row["PLAN_ID"] = attr["value"]
-
+                    elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_FEATURE_ID":
+                        continue
+                    else:
+                        logging.error("Unknown attribute: {}".format(attr))
+                        quit(1)
             # write child record
             data.append(row.copy())
             logging.debug("child {} {} {} RecurringFee: {}".format(row["childBillingItemId"], row["INV_PRODID"], row["Description"],
@@ -368,13 +372,19 @@ def getInvoiceDetail(startdate, enddate):
                 PLAN_ID = ""
                 if "attributes" in item["product"]:
                     for attr in item["product"]["attributes"]:
-                        #print (attr["attributeType"]["keyName"],attr["value"] )
                         if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
                             INV_PRODID = attr["value"]
-                        if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
+                        elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_DIVISION":
                             INV_DIV = attr["value"]
-                        if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
+                        elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                             PLAN_ID = attr["value"]
+                        elif attr["attributeType"]["keyName"] == "SUPPORT_PREMIUM":
+                            continue
+                        elif attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_FEATURE_ID":
+                            continue
+                        else:
+                            logging.error("Unknown attribute: {}".format(attr))
+                            quit()
 
                 # If Hourly calculate hourly rate and total hours
                 if item["hourlyFlag"]:
@@ -505,7 +515,7 @@ def getInvoiceDetail(startdate, enddate):
                        'childTotalRecurringCharge': 0,
                        'INV_PRODID': INV_PRODID,
                        'INV_DIV': INV_DIV,
-                       'PLAN_ID': PLAN_ID
+                       'PLAN_ID': PLAN_ID,
                         }
                 if storageFlag:
                     row["storage_notes"] = storage_notes
