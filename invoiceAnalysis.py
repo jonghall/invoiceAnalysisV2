@@ -1138,7 +1138,7 @@ def createType2Report(filename, classicUsage):
                 worksheet.set_column("F:F", 60, format2)
                 worksheet.set_column("G:ZZ", 18, format1)
         return
-    def createIaasInvoice(classicUsage):
+    def createChargesTopSheet(classicUsage):
         """
         Build a pivot table of items that typically show on CFTS invoice at child level
         paasCodes that appear on IaaS Invoice
@@ -1149,14 +1149,20 @@ def createType2Report(filename, classicUsage):
                      "D1VD2LL", "D1VD3LL", "D1VD4LL", "D1VD5LL", "D1VD6LL",
                      "D1VD7LL", "D1VD8LL", "D1VD9LL", "D1VDALL", "D1YJMLL", "D20Y7LL"]
 
+
+
+
         months = classicUsage.IBM_Invoice_Month.unique()
         for i in months:
             logging.info("Creating IaaS CFTS Invoice Top Sheet tab for {}.".format(i))
 
             if len(classicUsage) > 0:
                 """Get all the PaaS records with d-code INV_PRODID and not on the PaaS Invoice"""
+                #childRecords = classicUsage.query(
+                #    'RecordType == ["Child"] and INV_PRODID != [""] and INV_PRODID not in @paasCodes and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
                 childRecords = classicUsage.query(
-                    'RecordType == ["Child"] and INV_PRODID != [""] and INV_PRODID not in @paasCodes and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
+                    'RecordType == ["Child"] and INV_PRODID != [""] and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
+
                 childRecords["lineItemCategory"] = childRecords["Description"]
 
                 """ Get the parent and child records for Classic IaaS that don't have a INV_PRODID """
@@ -1200,8 +1206,8 @@ def createType2Report(filename, classicUsage):
                                               aggfunc=np.sum, margins=True,
                                               margins_name="Total", fill_value=0)
 
-                iaasInvoice.to_excel(writer, 'IaaS_{}'.format(i))
-                worksheet = writer.sheets['IaaS_{}'.format(i)]
+                iaasInvoice.to_excel(writer, 'ChargesTopSheet_{}'.format(i))
+                worksheet = writer.sheets['ChargesTopSheet_{}'.format(i)]
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
                 worksheet.set_column("A:D", 20, format2)
@@ -1276,8 +1282,8 @@ def createType2Report(filename, classicUsage):
         createDetailTab(classicUsage)
 
     if reconciliationFlag:
-        createIaasInvoice(classicUsage)
-        createPaaSInvoice(classicUsage)
+        createChargesTopSheet(classicUsage)
+        #createPaaSInvoice(classicUsage)
         createCreditInvoice(classicUsage)
 
     if summaryFlag:
