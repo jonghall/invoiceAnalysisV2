@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Author: Jon Hall
-# Copyright (c) 2022
+# Copyright (c) 2023
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -169,7 +169,7 @@ def parseChildren(row, parentDescription, children):
                         row["INV_DIV"] = attr["value"]
                     if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                         row["PLAN_ID"] = attr["value"]
-                    row["attributes"] = attr
+                    row["attributes"] = row["attributes"] + "{}={}, ".format(attr["attributeType"]["keyName"], attr["value"])
             # write child record
             data.append(row.copy())
             logging.debug("child {} {} {} RecurringFee: {}".format(row["childBillingItemId"], row["INV_PRODID"], row["Description"],
@@ -367,6 +367,7 @@ def getInvoiceDetail(startdate, enddate):
                 INV_PRODID = ""
                 INV_DIV = ""
                 PLAN_ID = ""
+                #PRIVATE_ONLY = ""
                 attributes = ""
                 if "attributes" in item["product"]:
                     for attr in item["product"]["attributes"]:
@@ -376,7 +377,7 @@ def getInvoiceDetail(startdate, enddate):
                             INV_DIV = attr["value"]
                         if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                             PLAN_ID = attr["value"]
-                        attributes = attr
+                        attributes = attributes + "{}={}, ".format(attr["attributeType"]["keyName"], attr["value"])
 
                 # If Hourly calculate hourly rate and total hours
                 if item["hourlyFlag"]:
@@ -1113,28 +1114,25 @@ def createType2Report(filename, classicUsage):
                 worksheet.set_column("B:E", 40, format2)
                 worksheet.set_column("F:ZZ", 18, format1)
         return
-    def createPaaSInvoice(classicUsage):
+    def createPaaSTopSheet(classicUsage):
         """
         Build a pivot table of PaaS object storage
         """
     
         logging.info("Creating PaaS_Invoice Tab.")
-        paasCodes = ["D01J5ZX","D01J6ZX","D01J7ZX","D01J8ZX","D01J9ZX","D01JAZX","D01JBZX","D01NGZX","D01NHZX","D01NIZX","D01NJZX","D022FZX","D1VCRLL","D1VCSLL",
-                     "D1VCTLL","D1VCULL","D1VCVLL","D1VCWLL","D1VCXLL","D1VCYLL","D1VCZLL","D1VD0LL","D1VD1LL","D1VD2LL","D1VD3LL","D1VD4LL","D1VD5LL","D1VD6LL",
-                     "D1VD7LL","D1VD8LL","D1VD9LL","D1VDALL","D1YJMLL","D20Y7LL"]
 
         months = classicUsage.IBM_Invoice_Month.unique()
         for i in months:
             logging.info("Creating PaaS CFTS Invoice Top Sheet tab for {}.".format(i))
 
-            paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_PRODID in @paasCodes and IBM_Invoice_Month == @i').copy()
+            paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_DIV in ["8E", "T8"] and IBM_Invoice_Month == @i').copy()
             if len(paascosRecords) > 0:
                 paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date","INV_PRODID", "childParentProduct", "Description"],
                                                 values=["totalAmount"],
                                                 aggfunc=np.sum, margins=True,
                                                 fill_value=0)
-                paascosSummary.to_excel(writer, 'PaaS_{}'.format(i))
-                worksheet = writer.sheets['PaaS_{}'.format(i)]
+                paascosSummary.to_excel(writer, 'PaaS_TopSheet_{}'.format(i))
+                worksheet = writer.sheets['PaaS_TopSheet_{}'.format(i)]
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
                 worksheet.set_column("A:D", 20, format2)
@@ -1142,19 +1140,11 @@ def createType2Report(filename, classicUsage):
                 worksheet.set_column("F:F", 60, format2)
                 worksheet.set_column("G:ZZ", 18, format1)
         return
-    def createChargesTopSheet(classicUsage):
+    def createIaaSTopSheet(classicUsage):
         """
         Build a pivot table of items that typically show on CFTS invoice at child level
         paasCodes that appear on IaaS Invoice
         """
-        paasCodes = ["D01J5ZX", "D01J6ZX", "D01J7ZX", "D01J8ZX", "D01J9ZX", "D01JAZX", "D01JBZX", "D01NGZX", "D01NHZX",
-                     "D01NIZX", "D01NJZX", "D022FZX", "D1VCRLL", "D1VCSLL",
-                     "D1VCTLL", "D1VCULL", "D1VCVLL", "D1VCWLL", "D1VCXLL", "D1VCYLL", "D1VCZLL", "D1VD0LL", "D1VD1LL",
-                     "D1VD2LL", "D1VD3LL", "D1VD4LL", "D1VD5LL", "D1VD6LL",
-                     "D1VD7LL", "D1VD8LL", "D1VD9LL", "D1VDALL", "D1YJMLL", "D20Y7LL"]
-
-
-
 
         months = classicUsage.IBM_Invoice_Month.unique()
         for i in months:
@@ -1162,35 +1152,20 @@ def createType2Report(filename, classicUsage):
 
             if len(classicUsage) > 0:
                 """Get all the PaaS records with d-code INV_PRODID and not on the PaaS Invoice"""
-                #childRecords = classicUsage.query(
-                #    'RecordType == ["Child"] and INV_PRODID != [""] and INV_PRODID not in @paasCodes and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
+
+                """ Get Child Records with a D-code in U7 or 5M division"""
                 childRecords = classicUsage.query(
-                    'RecordType == ["Child"] and INV_PRODID != [""] and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
+                    'RecordType == ["Child"] and INV_DIV in ["5M","U7"] and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
 
                 childRecords["lineItemCategory"] = childRecords["Description"]
 
-                """ Get the parent and child records for Classic IaaS that don't have a INV_PRODID """
+                """ Get the parent and child records for Classic IaaS that don't have a d code """
                 iaasRecords = classicUsage.query(
                     '(RecordType == ["Child"] and TaxCategory == ["PaaS"] and INV_PRODID == [""] and IBM_Invoice_Month == @i) or (IBM_Invoice_Month == @i and RecordType == ["Parent"] and (TaxCategory == ["IaaS"] or TaxCategory == ["HELP DESK"]) and totalAmount > 0)').copy()
 
-                #allcharges = classicUsage.query(
-                #    'IBM_Invoice_Month == @i and (Type == "NEW" or Type == "ONE-TIME-CHARGE" or Type == "RECURRING") and (TaxCategory == "IaaS" or TaxCategory == "HELP DESK")').copy()
-
-
-                #""" Get OS license charges and remove OS charge from Parent record """
-                #osRecords = classicUsage.query('IBM_Invoice_Month == @i and RecordType == "Child" and Category == "Operating System" and totalAmount > 0').copy()
-                #for index, row in osRecords.iterrows():
-                #    billingItemId = row["BillingItemId"]
-                #    osTotalAmount = row["totalAmount"]
-                #    for index1, row1 in iaasRecords.iterrows():
-                #        if row1["BillingItemId"] == billingItemId and row1["RecordType"] == "Parent":
-                #            iaasRecords.at[index1,"totalAmount"] = row1["totalAmount"] - osTotalAmount
-
                 """ FOr classic create new column named lineItemCategory for table based on Category"""
                 iaasRecords["lineItemCategory"] = iaasRecords["Category"]
-                #osRecords["lineItemCategory"] = osRecords["Category"]
 
-                #combined = pd.concat([childRecords,iaasRecords,osRecords])
                 combined = pd.concat([childRecords, iaasRecords])
 
                 """Fix non-descriptive IaaS records or situations where single d-code covers multiple child records so table groups and sums consistent with Invoice lineitems"""
@@ -1211,8 +1186,8 @@ def createType2Report(filename, classicUsage):
                                               aggfunc=np.sum, margins=True,
                                               margins_name="Total", fill_value=0)
 
-                iaasInvoice.to_excel(writer, 'ChargesTopSheet_{}'.format(i))
-                worksheet = writer.sheets['ChargesTopSheet_{}'.format(i)]
+                iaasInvoice.to_excel(writer, 'IaaS_TopSheet_{}'.format(i))
+                worksheet = writer.sheets['IaaS_TopSheet_{}'.format(i)]
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
                 worksheet.set_column("A:D", 20, format2)
@@ -1287,8 +1262,8 @@ def createType2Report(filename, classicUsage):
         createDetailTab(classicUsage)
 
     if reconciliationFlag:
-        createChargesTopSheet(classicUsage)
-        #createPaaSInvoice(classicUsage)
+        createIaaSTopSheet(classicUsage)
+        createPaaSTopSheet(classicUsage)
         createCreditInvoice(classicUsage)
 
     if summaryFlag:
