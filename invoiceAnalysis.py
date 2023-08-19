@@ -419,7 +419,7 @@ def getInvoiceDetail(startdate, enddate):
                     elif taxCategory == "IaaS":
                         if invoiceType == "RECURRING":
                             """ fix classic archive to be usage based"""
-                            if "Usage" in description:
+                            if categoryName == "Archive Storage Repository":
                                 serviceDateStart = invoiceDate - relativedelta(months=1)
                                 serviceDateEnd = serviceDateStart.replace(day=calendar.monthrange(serviceDateStart.year, serviceDateStart.month)[1])
                                 recurringDesc = "IaaS Usage"
