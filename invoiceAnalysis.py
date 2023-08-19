@@ -1231,6 +1231,10 @@ def createType2Report(filename, classicUsage):
                         combined.at[index, "lineItemCategory"] = "Cloud Object Storage Premium"
                     elif row["INV_PRODID"] == "D0277ZX":
                         combined.at[index, "lineItemCategory"] = "Flow Logs for VPC"
+                    elif row["INV_PRODID"] == "D01F1ZX":
+                        combined.at[index, "lineItemCategory"] = "Image Service for VPC"
+                    elif row["INV_PRODID"] == "D026XZX":
+                        combined.at[index, "lineItemCategory"] = "DNS Services"
 
                 iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "INV_PRODID", "lineItemCategory"],
                                               values=["totalAmount"],
