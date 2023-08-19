@@ -107,7 +107,7 @@ def getInvoiceList(startdate, enddate):
     logging.info("IBM Cloud account {}".format(invoiceList[0]["accountId"]))
     return invoiceList
 
-def parseChildren(row, parentDescription, children):
+def parseChildren(row, parentCategory, parentDescription, children):
     """
     Parse Children Record if requested
     """
@@ -118,6 +118,7 @@ def parseChildren(row, parentDescription, children):
         if float(child["recurringFee"]) > 0:
             row['RecordType'] = "Child"
             row["childBillingItemId"] = child["billingItemId"]
+            row['childParentCategory'] = parentCategory
             row['childParentProduct'] = parentDescription
             if "itemCategory" in child["product"]:
                 row["Category"] = child["product"]["itemCategory"]["name"]
@@ -160,6 +161,7 @@ def parseChildren(row, parentDescription, children):
             row["INV_PRODID"] = ""
             row["INV_DIV"] = ""
             row["PLAN_ID"] = ""
+            row["FEATURE_ID"] = ""
             row["attributes"] = ""
             if "attributes" in child["product"]:
                 for attr in child["product"]["attributes"]:
@@ -169,6 +171,8 @@ def parseChildren(row, parentDescription, children):
                         row["INV_DIV"] = attr["value"]
                     if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                         row["PLAN_ID"] = attr["value"]
+                    if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_FEATURE_ID":
+                        row["FEAURE_ID"] = attr["value"]
                     row["attributes"] = row["attributes"] + "{}={}, ".format(attr["attributeType"]["keyName"], attr["value"])
             # write child record
             data.append(row.copy())
@@ -186,7 +190,7 @@ def getAccountNetworkStorage():
         networkStorage = client['Account'].getNetworkStorage(id=ims_account, mask="id, createDate, capacityGb, nasType, notes, username, provisionedIops, billingItem.id")
     except Exception as e:
         logging.error("Account::getNetworkStorage {}, {}".format(e.faultCode, e.faultString))
-        quit()
+        quit(1)
 
     storage_df = pd.DataFrame(columns=[
                                'id',
@@ -322,7 +326,7 @@ def getInvoiceDetail(startdate, enddate):
                                          "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
             except SoftLayer.SoftLayerAPIError as e:
                 logging.error("Billing_Invoice::getInvoiceTopLevelItems: %s, %s" % (e.faultCode, e.faultString))
-                quit()
+                quit(1)
             count = 0
 
 
@@ -363,11 +367,10 @@ def getInvoiceDetail(startdate, enddate):
                 recurringFee = float(item['totalRecurringAmount'])
                 NewEstimatedMonthly = 0
 
-                """Get d-code for Parent """
+                """ Get d-code for Parent Item """
                 INV_PRODID = ""
                 INV_DIV = ""
                 PLAN_ID = ""
-                #PRIVATE_ONLY = ""
                 attributes = ""
                 if "attributes" in item["product"]:
                     for attr in item["product"]["attributes"]:
@@ -521,7 +524,7 @@ def getInvoiceDetail(startdate, enddate):
                 logging.debug(row)
 
                 if len(item["children"]) > 0:
-                    parseChildren(row, description, item["children"])
+                    parseChildren(row, categoryName, description, item["children"])
 
     columns = ['Portal_Invoice_Date',
                'Portal_Invoice_Time',
@@ -552,12 +555,14 @@ def getInvoiceDetail(startdate, enddate):
                'InvoiceRecurring',
                'Recurring_Description',
                'childBillingItemId',
+               'childParentCategory',
                'childParentProduct',
                'childUsage',
                'childTotalRecurringCharge',
                'INV_PRODID',
                'INV_DIV',
                'PLAN_ID',
+               'FEATURE_ID',
                "attributes"]
     if storageFlag:
         columns.append("storage_notes")
@@ -1033,6 +1038,7 @@ def createType2Report(filename, classicUsage):
     Break out of invoice data is based on "D Code" offering detail.
     The IaaS_YYYY-MM.  Items with the same INV_PRODID will appear as a single item on the CFTS invoice & Classic Infra by Category.
     The PaaS_YYYY-MM.  Items that have a PaaS CoS DCode appear a child level.
+
     """
     def createDetailTab(classicUsage):
         """
@@ -1117,6 +1123,7 @@ def createType2Report(filename, classicUsage):
     def createPaaSTopSheet(classicUsage):
         """
         Build a pivot table of PaaS object storage
+        Type	Portal_Invoice_Number	Service_Date_Start	Service_Date_End	Recurring_Description
         """
     
         logging.info("Creating PaaS_Invoice Tab.")
@@ -1127,7 +1134,7 @@ def createType2Report(filename, classicUsage):
 
             paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_DIV in ["8E", "T8"] and IBM_Invoice_Month == @i').copy()
             if len(paascosRecords) > 0:
-                paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date","INV_PRODID", "childParentProduct", "Description"],
+                paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End","INV_PRODID", "childParentProduct", "Description"],
                                                 values=["totalAmount"],
                                                 aggfunc=np.sum, margins=True,
                                                 fill_value=0)
@@ -1135,10 +1142,10 @@ def createType2Report(filename, classicUsage):
                 worksheet = writer.sheets['PaaS_TopSheet_{}'.format(i)]
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
-                worksheet.set_column("A:D", 20, format2)
-                worksheet.set_column("E:E", 40, format2)
-                worksheet.set_column("F:F", 60, format2)
-                worksheet.set_column("G:ZZ", 18, format1)
+                worksheet.set_column("A:F", 20, format2)
+                worksheet.set_column("G:G", 40, format2)
+                worksheet.set_column("H:H", 60, format2)
+                worksheet.set_column("I:ZZ", 18, format1)
         return
     def createIaaSTopSheet(classicUsage):
         """
@@ -1181,7 +1188,7 @@ def createType2Report(filename, classicUsage):
                     elif row["INV_PRODID"] == "D02AFZX":
                         combined.at[index, "lineItemCategory"] = "Containers/Kubernetes VPC"
 
-                iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "INV_PRODID", "lineItemCategory"],
+                iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "INV_PRODID", "lineItemCategory"],
                                               values=["totalAmount"],
                                               aggfunc=np.sum, margins=True,
                                               margins_name="Total", fill_value=0)
@@ -1190,9 +1197,9 @@ def createType2Report(filename, classicUsage):
                 worksheet = writer.sheets['IaaS_TopSheet_{}'.format(i)]
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
-                worksheet.set_column("A:D", 20, format2)
-                worksheet.set_column("E:E", 70, format2)
-                worksheet.set_column("F:ZZ", 18, format1)
+                worksheet.set_column("A:F", 20, format2)
+                worksheet.set_column("G:G", 70, format2)
+                worksheet.set_column("H:ZZ", 18, format1)
         return
     def createCreditInvoice(classicUsage):
         """
@@ -1208,8 +1215,8 @@ def createType2Report(filename, classicUsage):
                                              values=["totalAmount"],
                                              aggfunc=np.sum, margins=True, margins_name="Total",
                                              fill_value=0)
-                pivot.to_excel(writer, 'Credit_{}'.format(i))
-                worksheet = writer.sheets['Credit_{}'.format(i)]
+                pivot.to_excel(writer, 'Credit_TopSheet_{}'.format(i))
+                worksheet = writer.sheets['Credit_TopSheet_{}'.format(i)]
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
                 worksheet.set_column("A:C", 20, format2)
@@ -1416,7 +1423,7 @@ if __name__ == "__main__":
         if args.IC_API_KEY == None:
             if args.username == None or args.password == None or args.account == None:
                 logging.error("You must provide either IBM Cloud ApiKey or Internal Employee credentials & IMS account.")
-                quit()
+                quit(1)
             else:
                 if args.username != None or args.password != None:
                     logging.info("Using Internal endpoint and employee credentials.")
@@ -1431,7 +1438,7 @@ if __name__ == "__main__":
                     client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
                 else:
                     logging.error("Error!  Can't find internal credentials or ims account.")
-                    quit()
+                    quit(1)
         else:
             logging.info("Using IBM Cloud Account API Key.")
             IC_API_KEY = args.IC_API_KEY
