@@ -1147,8 +1147,10 @@ def createType2Report(filename, classicUsage):
         months = classicUsage.IBM_Invoice_Month.unique()
         for i in months:
             logging.info("Creating PaaS CFTS Invoice Top Sheet tab for {}.".format(i))
-
-            paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_DIV in ["8E", "T8"] and IBM_Invoice_Month == @i').copy()
+            """
+            Exceptions: D026XZX DNS appears on IaaS invoice
+            """
+            paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_DIV in ["8E", "T8"] and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
             if len(paascosRecords) > 0:
                 paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End","INV_PRODID", "childParentProduct", "Description"],
                                                 values=["totalAmount"],
@@ -1177,8 +1179,9 @@ def createType2Report(filename, classicUsage):
                 """Get all the PaaS records with d-code INV_PRODID and not on the PaaS Invoice"""
 
                 """ Get Child Records with a D-code in U7 or 5M division"""
+                """ Exception D026XZX DNS appears on IaaS Invoice"""
                 childRecords = classicUsage.query(
-                    'RecordType == ["Child"] and INV_DIV in ["5M","U7"] and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
+                    'RecordType == ["Child"] and (INV_DIV in ["5M","U7"] or INV_PRODID == "D026XZX") and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
 
                 childRecords["lineItemCategory"] = childRecords["Description"]
 
