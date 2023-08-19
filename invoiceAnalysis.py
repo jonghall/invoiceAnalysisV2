@@ -1169,7 +1169,7 @@ def createType2Report(filename, classicUsage):
             """
             paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_DIV in ["8E", "T8"] and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
             if len(paascosRecords) > 0:
-                paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End","INV_PRODID", "childParentProduct", "Description"],
+                paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End","dPart", "childParentProduct", "Description"],
                                                 values=["totalAmount"],
                                                 aggfunc=np.sum, margins=True,
                                                 fill_value=0)
