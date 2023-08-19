@@ -418,9 +418,15 @@ def getInvoiceDetail(startdate, enddate):
                         recurringDesc = "Platform Service Usage"
                     elif taxCategory == "IaaS":
                         if invoiceType == "RECURRING":
-                            serviceDateStart = invoiceDate
-                            serviceDateEnd = serviceDateStart.replace(day=calendar.monthrange(serviceDateStart.year, serviceDateStart.month)[1])
-                            recurringDesc = "IaaS Monthly"
+                            """ fix classic archive to be usage based"""
+                            if "Usage" in description:
+                                serviceDateStart = invoiceDate - relativedelta(months=1)
+                                serviceDateEnd = serviceDateStart.replace(day=calendar.monthrange(serviceDateStart.year, serviceDateStart.month)[1])
+                                recurringDesc = "IaaS Usage"
+                            else:
+                                serviceDateStart = invoiceDate
+                                serviceDateEnd = serviceDateStart.replace(day=calendar.monthrange(serviceDateStart.year, serviceDateStart.month)[1])
+                                recurringDesc = "IaaS Monthly"
                     elif taxCategory == "HELP DESK":
                         serviceDateStart = invoiceDate
                         serviceDateEnd = serviceDateStart.replace(
@@ -1200,6 +1206,13 @@ def createType2Report(filename, classicUsage):
                         combined.at[index, "lineItemCategory"] = "Cloudflare"
                     elif row["Category_Group"] == "Virtual Servers and Attached Services":
                         combined.at[index, "lineItemCategory"] = "Virtual Servers and Attached Services"
+                    elif row["Category"] == "Software License":
+                        if "vSAN" in row["description"]:
+                            combined.at[index, "lineItemCategory"] = "Software License VMware vSAN"
+                        elif "NSX" in row["description"]:
+                            combined.at[index, "lineItemCategory"] = "Software License VMware NSX"
+                        else:
+                            combined.at[index, "lineItemCategory"] = "Software License"
                     elif row["Category_Group"] == "Other":
                         combined.at[index, "lineItemCategory"] = "Network Other"
                     elif row["INV_PRODID"] == "D1VG4LL":
