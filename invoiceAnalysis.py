@@ -1213,7 +1213,7 @@ def createType2Report(filename, classicUsage):
                             combined.at[index, "lineItemCategory"] = "Software License VMware NSX"
                         else:
                             combined.at[index, "lineItemCategory"] = "Software License"
-                    elif row["Category_Group"] == "Other":
+                    elif row["Category_Group"] == "Other" and (row["Category"] == "Network Vlan" or row["Category"] == "Network Message Delivery") :
                         combined.at[index, "lineItemCategory"] = "Network Other"
                     elif row["INV_PRODID"] == "D1VG4LL":
                         combined.at[index, "lineItemCategory"] = "Block Storage for VPC"
