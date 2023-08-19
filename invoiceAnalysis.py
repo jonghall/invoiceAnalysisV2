@@ -1198,22 +1198,22 @@ def createType2Report(filename, classicUsage):
                 for index, row in combined.iterrows():
                     if row["Category"] == "Service" and row["Description"][:10] == "Cloudflare":
                         combined.at[index, "lineItemCategory"] = "Cloudflare"
-                    elif row["Category"] == "Virtual Servers and Attached Services":
+                    elif row["Category_Group"] == "Virtual Servers and Attached Services":
                         combined.at[index, "lineItemCategory"] = "Virtual Servers and Attached Services"
-                    elif row["Category"] == "Other":
+                    elif row["Category_Group"] == "Other":
                         combined.at[index, "lineItemCategory"] = "Network Other"
                     elif row["INV_PRODID"] == "D1VG4LL":
                         combined.at[index, "lineItemCategory"] = "Block Storage for VPC"
                     elif row["INV_PRODID"] == "D017EZX":
                         combined.at[index, "lineItemCategory"] = "Load Balancer for VPC"
                     elif row["INV_PRODID"] == "D00Y9ZX":
-                        combined.at[index, "lineItemCategory"] = "Virtual Server for VPC Advanced"
+                        combined.at[index, "lineItemCategory"] = "Virtual Server for VPC"
                     elif row["INV_PRODID"] == "D02AFZX":
                         combined.at[index, "lineItemCategory"] = "Containers/Kubernetes VPC"
-                    elif row["INV_PRODID"] == "D022FZX":
+                    elif row["INV_PRODID"] == "D01TZZX":
                         combined.at[index, "lineItemCategory"] = "Direct Link Dedicated"
                     elif row["INV_PRODID"] == "D017FZX":
-                        combined.at[index, "lineItemCategory"] = "VPC VPN"
+                        combined.at[index, "lineItemCategory"] = "VPN for VPC"
                     elif row["INV_PRODID"] == "D022FZX":
                         combined.at[index, "lineItemCategory"] = "Cloud Object Storage Premium"
 
