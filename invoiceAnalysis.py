@@ -1247,7 +1247,7 @@ def createType2Report(filename, classicUsage):
                     elif row["INV_PRODID"] == "D026XZX":
                         combined.at[index, "lineItemCategory"] = "DNS Services"
 
-                iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "INV_PRODID", "lineItemCategory"],
+                iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "dPart", "lineItemCategory"],
                                               values=["totalAmount"],
                                               aggfunc=np.sum, margins=True,
                                               margins_name="Total", fill_value=0)
