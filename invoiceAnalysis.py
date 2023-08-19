@@ -124,6 +124,10 @@ def parseChildren(row, parentCategory, parentDescription, children):
             row["childBillingItemId"] = child["billingItemId"]
             row['childParentCategory'] = parentCategory
             row['childParentProduct'] = parentDescription
+            if "dPart" in child:
+                row["dPart"] = child["dPart"]
+            else:
+                row["dPart"] = ""
             if "itemCategory" in child["product"]:
                 row["Category"] = child["product"]["itemCategory"]["name"]
             else:
@@ -334,8 +338,8 @@ def getInvoiceDetail(startdate, enddate):
                 """
 
                 Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit, offset=offset,
-                                    mask="id, billingItemId,categoryCode,category,category.group, hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
-                                         "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.description,children.category.group," \
+                                    mask="id, billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
+                                         "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.dPart,children.description,children.category.group," \
                                          "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
             except SoftLayer.SoftLayerAPIError as e:
                 logging.error("Billing_Invoice::getInvoiceTopLevelItems: %s, %s" % (e.faultCode, e.faultString))
@@ -376,6 +380,11 @@ def getInvoiceDetail(startdate, enddate):
                         hostName = item['hostName']
                 else:
                     hostName = ""
+
+                if "dPart" in item:
+                    dPart = item["dPart"]
+                else:
+                    dPart = ""
 
                 recurringFee = float(item['totalRecurringAmount'])
                 NewEstimatedMonthly = 0
@@ -512,6 +521,7 @@ def getInvoiceDetail(startdate, enddate):
                        'billing_notes': billing_notes,
                        'Category_Group': categoryGroup,
                        'Category': categoryName,
+                       'dPart': dPart,
                        'TaxCategory': taxCategory,
                        'Description': description,
                        'Memory': memory,
@@ -559,6 +569,7 @@ def getInvoiceDetail(startdate, enddate):
                'Category_Group',
                'Category',
                'TaxCategory',
+               'dPart',
                'Description',
                'Memory',
                'OS',
