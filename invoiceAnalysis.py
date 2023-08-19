@@ -162,6 +162,9 @@ def parseChildren(row, parentCategory, parentDescription, children):
             row["INV_DIV"] = ""
             row["PLAN_ID"] = ""
             row["FEATURE_ID"] = ""
+            row["IS_PRIVATE_NETWORK_ONLY"] = ""
+            row["DUAL_PATH_NETWORK"] = ""
+            row["INELIGIBLE_FOR_ACCOUNT_DISCOUNT"] = ""
             row["attributes"] = ""
             if "attributes" in child["product"]:
                 for attr in child["product"]["attributes"]:
@@ -172,7 +175,13 @@ def parseChildren(row, parentCategory, parentDescription, children):
                     if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                         row["PLAN_ID"] = attr["value"]
                     if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_FEATURE_ID":
-                        row["FEAURE_ID"] = attr["value"]
+                        row["FEATURE_ID"] = attr["value"]
+                    if attr["attributeType"]["keyName"] == "IS_PRIVATE_NETWORK_ONLY":
+                        row["IS_PRIVATE_NETWORK_ONLY"] = attr["value"]
+                    if attr["attributeType"]["keyName"] == "DUAL_PATH_NETWORK":
+                        row["DUAL_PATH_NETWORK"] = attr["value"]
+                    if attr["attributeType"]["keyName"] == "INELIGIBLE_FOR_ACCOUNT_DISCOUNT":
+                        row["INELIGIBLE_FOR_ACCOUNT_DISCOUNT"] = attr["value"]
                     row["attributes"] = row["attributes"] + "{}={}, ".format(attr["attributeType"]["keyName"], attr["value"])
             # write child record
             data.append(row.copy())
@@ -563,7 +572,10 @@ def getInvoiceDetail(startdate, enddate):
                'INV_DIV',
                'PLAN_ID',
                'FEATURE_ID',
-               "attributes"]
+               'IS_PRIVATE_NETWORK_ONLY',
+               'DUAL_PATH_NETWORK',
+               'INELIGIBLE_FOR_ACCOUNT_DISCOUNT',
+               'attributes']
     if storageFlag:
         columns.append("storage_notes")
 
@@ -1362,6 +1374,7 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--account", default=os.environ.get('ims_account', None), metavar="account", help="IMS Account")
     parser.add_argument("-s", "--startdate", default=os.environ.get('startdate', None), help="Start Year & Month in format YYYY-MM")
     parser.add_argument("-e", "--enddate", default=os.environ.get('enddate', None), help="End Year & Month in format YYYY-MM")
+    parser.add_argument("--debug", action=argparse.BooleanOptionalAction, help="Set Debug level for logging.")
     parser.add_argument("--load", action=argparse.BooleanOptionalAction, help="Load dataframes from pkl files for test purposes.")
     parser.add_argument("--save", action=argparse.BooleanOptionalAction, help="Store dataframes to pkl files for test purposes.")
     parser.add_argument("--months", default=os.environ.get('months', 1), help="Number of months including last full month to include in report.")
@@ -1384,6 +1397,10 @@ if __name__ == "__main__":
     parser.add_argument('--cosdetail', default=False, action=argparse.BooleanOptionalAction, help="Whether to write Classic Object Storage tab to worksheet.")
 
     args = parser.parse_args()
+    if args.debug:
+        log = logging.getLogger()
+        log.handlers[0].setLevel(logging.DEBUG)
+        log.handlers[1].setLevel(logging.DEBUG)
 
     """Set Flags to determine which Tabs are created in output"""
     storageFlag = args.storage
