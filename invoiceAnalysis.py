@@ -1207,9 +1207,9 @@ def createType2Report(filename, classicUsage):
                     elif row["Category_Group"] == "Virtual Servers and Attached Services":
                         combined.at[index, "lineItemCategory"] = "Virtual Servers and Attached Services"
                     elif row["Category"] == "Software License":
-                        if "vSAN" in row["description"]:
+                        if "vSAN" in row["Description"]:
                             combined.at[index, "lineItemCategory"] = "Software License VMware vSAN"
-                        elif "NSX" in row["description"]:
+                        elif "NSX" in row["Description"]:
                             combined.at[index, "lineItemCategory"] = "Software License VMware NSX"
                         else:
                             combined.at[index, "lineItemCategory"] = "Software License"
@@ -1229,6 +1229,8 @@ def createType2Report(filename, classicUsage):
                         combined.at[index, "lineItemCategory"] = "VPN for VPC"
                     elif row["INV_PRODID"] == "D022FZX":
                         combined.at[index, "lineItemCategory"] = "Cloud Object Storage Premium"
+                    elif row["INV_PRODID"] == "D0277ZX":
+                        combined.at[index, "lineItemCategory"] = "Flow Logs for VPC"
 
                 iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "INV_PRODID", "lineItemCategory"],
                                               values=["totalAmount"],
