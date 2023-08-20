@@ -173,7 +173,6 @@ def parseChildren(row, parentCategory, parentDescription, children):
             row["IS_PRIVATE_NETWORK_ONLY"] = ""
             row["DUAL_PATH_NETWORK"] = ""
             row["INELIGIBLE_FOR_ACCOUNT_DISCOUNT"] = ""
-            row["attributes"] = ""
             if "attributes" in child["product"]:
                 for attr in child["product"]["attributes"]:
                     if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
@@ -190,7 +189,7 @@ def parseChildren(row, parentCategory, parentDescription, children):
                         row["DUAL_PATH_NETWORK"] = attr["value"]
                     if attr["attributeType"]["keyName"] == "INELIGIBLE_FOR_ACCOUNT_DISCOUNT":
                         row["INELIGIBLE_FOR_ACCOUNT_DISCOUNT"] = attr["value"]
-                    row["attributes"] = row["attributes"] + "{}={}, ".format(attr["attributeType"]["keyName"], attr["value"])
+
             # write child record
             data.append(row.copy())
             logging.debug("child {} {} {} RecurringFee: {}".format(row["childBillingItemId"], row["INV_PRODID"], row["Description"],
@@ -393,7 +392,6 @@ def getInvoiceDetail(startdate, enddate):
                 INV_PRODID = ""
                 INV_DIV = ""
                 PLAN_ID = ""
-                attributes = ""
                 if "attributes" in item["product"]:
                     for attr in item["product"]["attributes"]:
                         if attr["attributeType"]["keyName"] == "BLUEMIX_PART_NUMBER":
@@ -402,7 +400,6 @@ def getInvoiceDetail(startdate, enddate):
                             INV_DIV = attr["value"]
                         if attr["attributeType"]["keyName"] == "BLUEMIX_SERVICE_PLAN_ID":
                             PLAN_ID = attr["value"]
-                        attributes = attributes + "{}={}, ".format(attr["attributeType"]["keyName"], attr["value"])
 
                 # If Hourly calculate hourly rate and total hours
                 if item["hourlyFlag"]:
@@ -541,7 +538,6 @@ def getInvoiceDetail(startdate, enddate):
                        'INV_PRODID': INV_PRODID,
                        'INV_DIV': INV_DIV,
                        'PLAN_ID': PLAN_ID,
-                       'attributes': attributes
                         }
                 if storageFlag:
                     row["storage_notes"] = storage_notes
@@ -595,8 +591,7 @@ def getInvoiceDetail(startdate, enddate):
                'FEATURE_ID',
                'IS_PRIVATE_NETWORK_ONLY',
                'DUAL_PATH_NETWORK',
-               'INELIGIBLE_FOR_ACCOUNT_DISCOUNT',
-               'attributes']
+               'INELIGIBLE_FOR_ACCOUNT_DISCOUNT']
     if storageFlag:
         columns.append("storage_notes")
 
@@ -1097,7 +1092,7 @@ def createType2Report(filename, classicUsage):
         if len(classicUsage)>0:
             logging.info("Creating CategoryGroupSummary Tab.")
             parentRecords= classicUsage.query('RecordType == ["Parent"]')
-            invoiceSummary = pd.pivot_table(parentRecords, index=["Type", "Category_Group", "Category"],
+            invoiceSummary = pd.pivot_table(parentRecords, index=["Type","dPart", "Category_Group", "Category"],
                                             values=["totalAmount"],
                                             columns=['IBM_Invoice_Month'],
                                             aggfunc={'totalAmount': np.sum,}, margins=True, margins_name="Total", fill_value=0).\
@@ -1107,9 +1102,10 @@ def createType2Report(filename, classicUsage):
             format1 = workbook.add_format({'num_format': '$#,##0.00'})
             format2 = workbook.add_format({'align': 'left'})
             worksheet.set_column("A:A", 20, format2)
-            worksheet.set_column("B:B", 40, format2)
-            worksheet.set_column("C:C", 60, format2)
-            worksheet.set_column("D:ZZ", 18, format1)
+            worksheet.set_column("B:B", 20, format2)
+            worksheet.set_column("C:C", 40, format2)
+            worksheet.set_column("D:D", 60, format2)
+            worksheet.set_column("E:ZZ", 18, format1)
         return
     def createCategooryDetail(classicUsage):
         """
@@ -1194,24 +1190,23 @@ def createType2Report(filename, classicUsage):
 
             if len(classicUsage) > 0:
                 """Get all the PaaS records with d-code INV_PRODID and not on the PaaS Invoice"""
-
-                """ Get Child Records with a D-code in U7 or 5M division"""
+                """ Get Child Records with a D-code in U7 or 5M or SQ division"""
                 """ Exception D026XZX DNS appears on IaaS Invoice"""
-                childRecords = classicUsage.query(
-                    'RecordType == ["Child"] and (INV_DIV in ["5M","U7"] or INV_PRODID == "D026XZX") and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
-
+                childRecords = classicUsage.query('RecordType == ["Child"] and (INV_DIV in ["SQ", "5M","U7"] or INV_PRODID == "D026XZX") and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
                 childRecords["lineItemCategory"] = childRecords["Description"]
 
                 """ Get the parent and child records for Classic IaaS that don't have a d code """
-                iaasRecords = classicUsage.query(
-                    '(RecordType == ["Child"] and TaxCategory == ["PaaS"] and INV_PRODID == [""] and IBM_Invoice_Month == @i) or (IBM_Invoice_Month == @i and RecordType == ["Parent"] and (TaxCategory == ["IaaS"] or TaxCategory == ["HELP DESK"]) and totalAmount > 0)').copy()
+                iaasRecords = classicUsage.query('(IBM_Invoice_Month == @i and RecordType == ["Parent"] and TaxCategory != ["PaaS"] and totalAmount > 0)').copy()
 
-                """ FOr classic create new column named lineItemCategory for table based on Category"""
+                """ For classic create new column named lineItemCategory for table based on Category"""
                 iaasRecords["lineItemCategory"] = iaasRecords["Category"]
 
                 combined = pd.concat([childRecords, iaasRecords])
 
-                """Fix non-descriptive IaaS records or situations where single d-code covers multiple child records so table groups and sums consistent with Invoice lineitems"""
+                """ 
+                Fix non-descriptive IaaS records or situations where single d-code covers multiple child records
+                so table groups and sums consistent with Invoice lineitems
+                """
                 for index, row in combined.iterrows():
                     if row["Category"] == "Service" and row["Description"][:10] == "Cloudflare":
                         combined.at[index, "lineItemCategory"] = "Cloudflare"
@@ -1246,6 +1241,12 @@ def createType2Report(filename, classicUsage):
                         combined.at[index, "lineItemCategory"] = "Image Service for VPC"
                     elif row["INV_PRODID"] == "D026XZX":
                         combined.at[index, "lineItemCategory"] = "DNS Services"
+                    elif row["INV_PRODID"] == "D05J7ZX":
+                        combined.at[index, "lineItemCategory"] = "Block Storage Snapshots for VPC"
+                    elif row["INV_PRODID"] == "D00VFZX":
+                        combined.at[index, "lineItemCategory"] = "Floating IP for VPC"
+                    elif row["INV_PRODID"] == "D05Q5ZX":
+                        combined.at[index, "lineItemCategory"] = "Bare Metal Servers for VPC"
 
                 iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "dPart", "lineItemCategory"],
                                               values=["totalAmount"],
@@ -1342,7 +1343,8 @@ def createType2Report(filename, classicUsage):
     if storageFlag:
         createStorageTab(classicUsage)
 
-    if bssFlag:
+    # If BSS Flag set and using APIKEY then pull BSS Usage for corresponding month
+    if bssFlag and args.IC_API_KEY != None:
         getBSS()
 
     writer.close()
