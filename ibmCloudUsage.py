@@ -970,7 +970,7 @@ if __name__ == "__main__":
         storage = instancesUsage.query('service_id == "is.volume"')
 
         months = instancesUsage.month.unique()
-        print (months)
+
         for i in months:
             createChargesbyServer(servers,i)
             createVirtualServerTab(servers, i)
