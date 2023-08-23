@@ -1217,16 +1217,16 @@ def createType2Report(filename, classicUsage):
                 iaasRecords["lineItemCategory"] = iaasRecords["Category"]
                 for index, row in iaasRecords.iterrows():
                     if row["Category_Group"] == "Virtual Servers and Attached Services":
-                        combined.at[index, "lineItemCategory"] = "Virtual Servers and Attached Services"
+                        iaasRecords.at[index, "lineItemCategory"] = "Virtual Servers and Attached Services"
                     elif row["Category"] == "Software License":
                         if "vSAN" in row["Description"]:
-                            combined.at[index, "lineItemCategory"] = "Software License VMware vSAN"
+                            iaasRecords.at[index, "lineItemCategory"] = "Software License VMware vSAN"
                         elif "NSX" in row["Description"]:
-                            combined.at[index, "lineItemCategory"] = "Software License VMware NSX"
+                            iaasRecords.at[index, "lineItemCategory"] = "Software License VMware NSX"
                         else:
-                            combined.at[index, "lineItemCategory"] = "Software License"
+                            iaasRecords.at[index, "lineItemCategory"] = "Software License"
                     elif row["Category_Group"] == "Other" and (row["Category"] == "Network Vlan" or row["Category"] == "Network Message Delivery") :
-                        combined.at[index, "lineItemCategory"] = "Network Other"
+                        iaasRecords.at[index, "lineItemCategory"] = "Network Other"
 
                 combined = pd.concat([childRecords, iaasRecords])
 
