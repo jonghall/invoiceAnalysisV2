@@ -1165,7 +1165,7 @@ def createType2Report(filename, classicUsage):
             Include all divisions that are not considered IaaS.  Exceptions: D026XZX DNS appears on IaaS invoice even though not in IaaS division
             """
             iaasDivs = ["7D", "SQ", "5M", "U3", "U6", "U7"]
-            paascosRecords = classicUsage.query('RecordType == ["Child"] and taxCategory = "PaaS" and INV_DIV not in @iaasDivs and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
+            paascosRecords = classicUsage.query('RecordType == ["Child"] and TaxCategory == ["PaaS"] and INV_DIV not in @iaasDivs and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
             if len(paascosRecords) > 0:
                 paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End","dPart", "childParentProduct", "Description"],
                                                 values=["totalAmount"],
