@@ -15,7 +15,7 @@
 
 
 __author__ = 'jonhall'
-import SoftLayer, os, logging, logging.config, json, calendar, os.path, argparse, base64, re, urllib
+import SoftLayer, os, logging, logging.config, json, calendar, os.path, argparse, base64, re, urllib, yaml
 import pandas as pd
 import numpy as np
 from sendgrid import SendGridAPIClient
@@ -33,6 +33,7 @@ from ibm_platform_services.resource_controller_v2 import *
 from ibm_cloud_sdk_core import ApiException
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from dotenv import load_dotenv
+from yaml import Loader
 def setup_logging(default_path='logging.json', default_level=logging.info, env_key='LOG_CFG'):
     # read logging.json for log parameters to be ued by script
     path = default_path
@@ -1161,9 +1162,10 @@ def createType2Report(filename, classicUsage):
         for i in months:
             logging.info("Creating PaaS CFTS Invoice Top Sheet tab for {}.".format(i))
             """
-            Exceptions: D026XZX DNS appears on IaaS invoice
+            Include all divisions that are not considered IaaS.  Exceptions: D026XZX DNS appears on IaaS invoice even though not in IaaS division
             """
-            paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_DIV in ["8E", "T8"] and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
+            iaasDivs = ["7D", "SQ", "5M", "U3", "U6", "U7"]
+            paascosRecords = classicUsage.query('RecordType == ["Child"] and INV_DIV not in @iaasDivs and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
             if len(paascosRecords) > 0:
                 paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End","dPart", "childParentProduct", "Description"],
                                                 values=["totalAmount"],
@@ -1189,28 +1191,32 @@ def createType2Report(filename, classicUsage):
             logging.info("Creating CFTS Invoice Top Sheet tab for {}.".format(i))
 
             if len(classicUsage) > 0:
-                """Get all the PaaS records with d-code INV_PRODID and not on the PaaS Invoice"""
-                """ Get Child Records with a D-code in U7 or 5M or SQ division"""
-                """ Exception D026XZX DNS appears on IaaS Invoice"""
-                childRecords = classicUsage.query('RecordType == ["Child"] and (INV_DIV in ["SQ", "5M","U7"] or INV_PRODID == "D026XZX") and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
-                childRecords["lineItemCategory"] = childRecords["Description"]
-
-                """ Get the parent and child records for Classic IaaS that don't have a d code """
-                iaasRecords = classicUsage.query('(IBM_Invoice_Month == @i and RecordType == ["Parent"] and TaxCategory != ["PaaS"] and totalAmount > 0)').copy()
-
-                """ For classic create new column named lineItemCategory for table based on Category"""
-                iaasRecords["lineItemCategory"] = iaasRecords["Category"]
-
-                combined = pd.concat([childRecords, iaasRecords])
+                """
+                Get all the BSS child records with d-code in one of the IaaS divisions
+                Exception D026XZX DNS appears on IaaS Invoice even though not in IaaS division
+                """
+                iaasDivs = ["7D", "SQ", "5M", "U3", "U6","U7"]
+                childRecords = classicUsage.query('RecordType == ["Child"] and (INV_DIV in @iaasDivs or INV_PRODID == "D026XZX") and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
 
                 """ 
-                Fix non-descriptive IaaS records or situations where single d-code covers multiple child records
-                so table groups and sums consistent with Invoice lineitems
+                Populate lineItemCateoogry with meaningful service name so that rows summarize correctly consistent with CFTS
                 """
-                for index, row in combined.iterrows():
-                    if row["Category"] == "Service" and row["Description"][:10] == "Cloudflare":
-                        combined.at[index, "lineItemCategory"] = "Cloudflare"
-                    elif row["Category_Group"] == "Virtual Servers and Attached Services":
+                childRecords["lineItemCategory"] = childRecords["Description"]
+                for index, row in childRecords.iterrows():
+                    part_number = row["INV_PRODID"].strip()
+                    if part_number in dpartDescriptions:
+                        childRecords.at[index, "lineItemCategory"] = dpartDescriptions[part_number]
+
+                """ Get the parent Classic IaaS records not metered in BSS """
+                iaasRecords = classicUsage.query('(IBM_Invoice_Month == @i and RecordType == ["Parent"] and TaxCategory != ["PaaS"] and totalAmount > 0)').copy()
+
+                """
+                Create a new lineItemCategory column for table based on Category
+                Adjust VMware Licensing so the description is meaingful
+                """
+                iaasRecords["lineItemCategory"] = iaasRecords["Category"]
+                for index, row in iaasRecords.iterrows():
+                    if row["Category_Group"] == "Virtual Servers and Attached Services":
                         combined.at[index, "lineItemCategory"] = "Virtual Servers and Attached Services"
                     elif row["Category"] == "Software License":
                         if "vSAN" in row["Description"]:
@@ -1221,32 +1227,8 @@ def createType2Report(filename, classicUsage):
                             combined.at[index, "lineItemCategory"] = "Software License"
                     elif row["Category_Group"] == "Other" and (row["Category"] == "Network Vlan" or row["Category"] == "Network Message Delivery") :
                         combined.at[index, "lineItemCategory"] = "Network Other"
-                    elif row["INV_PRODID"] == "D1VG4LL":
-                        combined.at[index, "lineItemCategory"] = "Block Storage for VPC"
-                    elif row["INV_PRODID"] == "D017EZX":
-                        combined.at[index, "lineItemCategory"] = "Load Balancer for VPC"
-                    elif row["INV_PRODID"] == "D00Y9ZX":
-                        combined.at[index, "lineItemCategory"] = "Virtual Server for VPC"
-                    elif row["INV_PRODID"] == "D02AFZX":
-                        combined.at[index, "lineItemCategory"] = "Containers/Kubernetes VPC"
-                    elif row["INV_PRODID"] == "D01TZZX":
-                        combined.at[index, "lineItemCategory"] = "Direct Link Dedicated"
-                    elif row["INV_PRODID"] == "D017FZX":
-                        combined.at[index, "lineItemCategory"] = "VPN for VPC"
-                    elif row["INV_PRODID"] == "D022FZX":
-                        combined.at[index, "lineItemCategory"] = "Cloud Object Storage Premium"
-                    elif row["INV_PRODID"] == "D0277ZX":
-                        combined.at[index, "lineItemCategory"] = "Flow Logs for VPC"
-                    elif row["INV_PRODID"] == "D01F1ZX":
-                        combined.at[index, "lineItemCategory"] = "Image Service for VPC"
-                    elif row["INV_PRODID"] == "D026XZX":
-                        combined.at[index, "lineItemCategory"] = "DNS Services"
-                    elif row["INV_PRODID"] == "D05J7ZX":
-                        combined.at[index, "lineItemCategory"] = "Block Storage Snapshots for VPC"
-                    elif row["INV_PRODID"] == "D00VFZX":
-                        combined.at[index, "lineItemCategory"] = "Floating IP for VPC"
-                    elif row["INV_PRODID"] == "D05Q5ZX":
-                        combined.at[index, "lineItemCategory"] = "Bare Metal Servers for VPC"
+
+                combined = pd.concat([childRecords, iaasRecords])
 
                 iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "dPart", "lineItemCategory"],
                                               values=["totalAmount"],
@@ -2095,6 +2077,8 @@ if __name__ == "__main__":
         log.handlers[0].setLevel(logging.DEBUG)
         log.handlers[1].setLevel(logging.DEBUG)
 
+    logging.info("Creating detail dPart table for report use.")
+    dpartDescriptions = yaml.load(open('dpart-descriptions.yaml', 'r'), Loader=Loader)
 
     """Set Flags to determine which Tabs are created in output"""
     storageFlag = args.storage

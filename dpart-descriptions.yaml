@@ -1,0 +1,79 @@
+D1VG4LL: Block Storage for VPC
+D017EZX: Load Balancer for VPC
+D00Y9ZX: Virtual Server for VPC
+D02AFZX: Containers/Kubernetes VPC
+D017FZX: VPN for VPC
+D01F1ZX: Image Service for VPC
+D026XZX: DNS Services
+D00VFZX: Floating IP for VPC
+D00KNZX: Internet Services Standard
+D00W5ZX: Internet Services Enterprise
+D00YFZX: Virtual Private Cloud
+D01J0ZX: Internet Services Global Load Balancer
+D01J1ZX: Internet Services Security
+D01LFZX: Power Systems Virtual Server Group IBMI_LPP_PTEN_APPLICATION
+D01LGZX: Power Systems Virtual Server Group AIX_MEDIUM_APPLICATION
+D01LHZX: Power Systems Virtual Server Group IBMI_OS_PTEN_APPLICATION
+D01N5ZX: Standard VMware Solutions ZERTO
+D01NGZX: Power Systems Virtual Server Group ED/MHU/SOD/SOS
+D01NHZX: Power Systems Virtual Server Group GIGABYTES TRANSMITTED
+D01NIZX: Power Systems Virtual Server Group EC
+D01NJZX: Power Systems Virtual Server Group TIER_THREE_STORAGE
+D01TXZX: Direct Link Connect
+D01TZZX: Direct Link Dedicated
+D022FZX: Cloud Object Storage Premium Smart Tier
+D022HZX: Power System Virtual Server Group IBMI HA PTHIRTY APPLICATION INSTANCES
+D022IZX: Power Systems Virtual Server Group IBMI COS APPLICATION INSTANCES
+D0277ZX: Flow Logs for VPC
+D02BUZX: VMware Solutions
+D02JBZX: Dedicated host for VPC
+D02Y0ZX: Skytap On IBM Cloud
+D04L1ZX: Dizzion DaaS
+D051ZZX: File Storage for VPC
+D05J7ZX: Block Storage Snapshots for VPC
+D05Q5ZX: Bare Metal Servers for VPC OS Licenses
+D08ZDZX: Cloud Object Storage Premium ARCHIVE
+D09VDZX: Bare Metal Servers for VPC
+D0A0YZX: Power Systems Virtual Server Group OS LICENSE Usage
+D0A12ZX: Power Systems Virtual Server Group SUSE OS LICENSE Usage
+D0BBWZX: Virtual Server for VPC z vsi instance
+D0BV9ZX: VMware as a Service
+D0DF5ZX: Internet Services Standard Next
+D0DPTZX: Internet Services Enterprise Essential
+D1VCRLL: Cloud Object Storage Premium Archive Usage
+D1VCSLL: Cloud Object Storage Premium Standard Class A Calls
+D1VCTLL: Cloud Object Storage Premium Standard Class B Calls
+D1VCULL: Cloud Object Storage Premium Standard Bandwidth
+D1VCVLL: Cloud Object Storage Premium Vault Storage
+D1VCWLL: Cloud Object Storage Premium Vault Class A Calls
+D1VCXLL: Cloud Object Storage Premium Vault Class B Calls
+D1VCYLL: Cloud Object Storage Premium Vault Bandwidth
+D1VCZLL: Cloud Object Storage Premium Vault Retrieval
+D1VD0LL: Cloud Object Storage Premium Cold Vault Storage
+D1VD1LL: Cloud Object Storage Premium Cold Vault Class A Calls
+D1VD2LL: Cloud Object Storage Premium Cold Vault Class B Calls
+D1VD3LL: Cloud Object Storage Premium Cold Vault Bandwidth
+D1VD4LL: Cloud Object Storage Premium Cold Vault Retrieval
+D1VD5LL: Cloud Object Storage Premium Flex Storage
+D1VD6LL: Cloud Object Storage Premium Flex Storage Class A Calls
+D1VD7LL: Cloud Object Storage Premium Flex Storage Class B Calls
+D1VD8LL: Cloud Object Storage Premium Flex Storage Bandwidth
+D1VD9LL: Cloud Object Storage Premium Flex Storage Retrieval
+D1VDALL: Cloud Object Storage Premium Flex Max Cap
+D00W6ZX: Internet Services Enterprise Package Usage
+D0932ZX: Client VPC for VPC
+D0D47ZX: Software Billing Data Security Broker INSTANCE-HOURS-PER-MONTH
+D0932ZX: Software Billing Data Security Broker INSTANCE-HOURS-PER-MONTH
+D0DPUZX: Internet Services Enterprise Essential
+D1YJMLL: Cloud Object Storage Premium ASPERA Egress
+part-is.rhelOS-power: Power for VPC Usage
+part-is.suseOS-zVSI: Virtual Server for VPC zVSI SUSE License
+part-is.zvsi-SE-ram-hours: VIrtual Server for VPC zVSI Memory Usage
+
+
+
+
+
+
+
+
