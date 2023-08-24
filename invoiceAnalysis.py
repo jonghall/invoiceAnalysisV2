@@ -1150,37 +1150,7 @@ def createType2Report(filename, classicUsage):
                 worksheet.set_column("B:E", 40, format2)
                 worksheet.set_column("F:ZZ", 18, format1)
         return
-    def createPaaSTopSheet(classicUsage):
-        """
-        Build a pivot table of PaaS object storage
-        Type	Portal_Invoice_Number	Service_Date_Start	Service_Date_End	Recurring_Description
-        """
-    
-        logging.info("Creating PaaS_Invoice Tab.")
-
-        months = classicUsage.IBM_Invoice_Month.unique()
-        for i in months:
-            logging.info("Creating PaaS CFTS Invoice Top Sheet tab for {}.".format(i))
-            """
-            Include all divisions that are not considered IaaS.  Exceptions: D026XZX DNS appears on IaaS invoice even though not in IaaS division
-            """
-            iaasDivs = ["7D", "SQ", "5M", "U3", "U6", "U7"]
-            paascosRecords = classicUsage.query('RecordType == ["Child"] and TaxCategory == ["PaaS"] and INV_DIV not in @iaasDivs and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
-            if len(paascosRecords) > 0:
-                paascosSummary = pd.pivot_table(paascosRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End","dPart", "childParentProduct", "Description"],
-                                                values=["totalAmount"],
-                                                aggfunc=np.sum, margins=True,
-                                                fill_value=0)
-                paascosSummary.to_excel(writer, 'PaaS_TopSheet_{}'.format(i))
-                worksheet = writer.sheets['PaaS_TopSheet_{}'.format(i)]
-                format1 = workbook.add_format({'num_format': '$#,##0.00'})
-                format2 = workbook.add_format({'align': 'left'})
-                worksheet.set_column("A:F", 20, format2)
-                worksheet.set_column("G:G", 40, format2)
-                worksheet.set_column("H:H", 60, format2)
-                worksheet.set_column("I:ZZ", 18, format1)
-        return
-    def createIaaSTopSheet(classicUsage):
+    def createTopSheet(classicUsage):
         """
         Build a pivot table of items that typically show on CFTS invoice at child level
         paasCodes that appear on IaaS Invoice
@@ -1195,6 +1165,7 @@ def createType2Report(filename, classicUsage):
                 Get all the BSS child records with d-code in one of the IaaS divisions
                 Exception D026XZX DNS appears on IaaS Invoice even though not in IaaS division
                 """
+                logging.info("Creating Infrastructure-as-a-Service detail for {}.".format(i))
                 iaasDivs = ["7D", "SQ", "5M", "U3", "U6","U7"]
                 childRecords = classicUsage.query('RecordType == ["Child"] and (INV_DIV in @iaasDivs or INV_PRODID == "D026XZX") and totalAmount > 0 and IBM_Invoice_Month == @i').copy()
 
@@ -1235,34 +1206,55 @@ def createType2Report(filename, classicUsage):
                                               aggfunc=np.sum, margins=True,
                                               margins_name="Total", fill_value=0)
 
-                iaasInvoice.to_excel(writer, 'IaaS_TopSheet_{}'.format(i))
-                worksheet = writer.sheets['IaaS_TopSheet_{}'.format(i)]
+                iaasInvoice.to_excel(writer, 'TopSheet_{}'.format(i),startcol=0, startrow=1)
+                worksheet = writer.sheets['TopSheet_{}'.format(i)]
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
+                boldtext = workbook.add_format({'bold': True})
+                worksheet.write(0, 0, "Infrastructure as a Service Charges appearing in {}".format(i),boldtext)
                 worksheet.set_column("A:F", 20, format2)
                 worksheet.set_column("G:G", 70, format2)
                 worksheet.set_column("H:ZZ", 18, format1)
-        return
-    def createCreditInvoice(classicUsage):
-        """
-        Build a pivot table Credit Invoices
-        """
-        months = classicUsage.IBM_Invoice_Month.unique()
-        for i in months:
-            creditItems = classicUsage.query('IBM_Invoice_Month == @i and Type == "CREDIT"')
 
-            if len(creditItems) > 0:
-                logging.info("Creating Credit Invoice Tab for {}.".format(i))
-                pivot = pd.pivot_table(creditItems, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date"],
-                                             values=["totalAmount"],
-                                             aggfunc=np.sum, margins=True, margins_name="Total",
-                                             fill_value=0)
-                pivot.to_excel(writer, 'Credit_TopSheet_{}'.format(i))
-                worksheet = writer.sheets['Credit_TopSheet_{}'.format(i)]
-                format1 = workbook.add_format({'num_format': '$#,##0.00'})
-                format2 = workbook.add_format({'align': 'left'})
-                worksheet.set_column("A:C", 20, format2)
-                worksheet.set_column("D:ZZ", 18, format1)
+                logging.info("Creating PaaS Detail for{}.".format(i))
+                """
+                Include all divisions that are not considered IaaS.  Exceptions: D026XZX DNS appears on IaaS invoice even though not in IaaS division
+                """
+
+                paasRecords = classicUsage.query('RecordType == ["Child"] and TaxCategory == ["PaaS"] and INV_DIV not in @iaasDivs and INV_PRODID != "D026XZX" and IBM_Invoice_Month == @i').copy()
+
+                """ 
+                Replace lineItemCategory with meaningful service name so that rows summarize correctly consistent with CFTS
+                """
+                paasRecords["lineItemCategory"] = paasRecords["childParentProduct"]
+                for index, row in paasRecords.iterrows():
+                    part_number = row["INV_PRODID"].strip()
+                    if part_number in dpartDescriptions:
+                        paasRecords.at[index, "lineItemCategory"] = dpartDescriptions[part_number]
+
+                if len(paasRecords) > 0:
+                    startrow = len(iaasInvoice.index) + 5
+                    paasSummary = pd.pivot_table(paasRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date","Service_Date_Start", "Service_Date_End","dPart", "lineItemCategory"],
+                                                    values=["totalAmount"],
+                                                    aggfunc=np.sum, margins=True,
+                                                    fill_value=0)
+                    paasSummary.to_excel(writer, 'TopSheet_{}'.format(i),startcol=0, startrow=startrow)
+                    worksheet.write(startrow-1,0, "Platform as a Service Charges appearing in {}".format(i), boldtext)
+
+                creditItems = classicUsage.query('IBM_Invoice_Month == @i and Type == "CREDIT"').copy()
+
+                if len(creditItems) > 0:
+                    startrow = startrow + len(paasSummary.index) + 4
+                    logging.info("Creating Credit detail for {}.".format(i))
+
+                    creditItems["lineItemCategory"] = creditItems["Category"]
+                    pivot = pd.pivot_table(creditItems, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date","Service_Date_Start", "Service_Date_End","dPart", "lineItemCategory"],
+                                           values=["totalAmount"],
+                                           aggfunc=np.sum, margins=True, margins_name="Total",
+                                           fill_value=0)
+                    pivot.to_excel(writer, 'TopSheet_{}'.format(i),startcol=0, startrow=startrow)
+                    worksheet.write(startrow - 1, 0, "Credit detail appearing in {}".format(i), boldtext)
+
         return
     def createStorageTab(classicUsage):
         """
@@ -1311,9 +1303,7 @@ def createType2Report(filename, classicUsage):
         createDetailTab(classicUsage)
 
     if reconciliationFlag:
-        createIaaSTopSheet(classicUsage)
-        createPaaSTopSheet(classicUsage)
-        createCreditInvoice(classicUsage)
+        createTopSheet(classicUsage)
 
     if summaryFlag:
         createCategoryGroupSummary(classicUsage)

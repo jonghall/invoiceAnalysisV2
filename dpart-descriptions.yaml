@@ -69,11 +69,29 @@ D1YJMLL: Cloud Object Storage Premium ASPERA Egress
 part-is.rhelOS-power: Power for VPC Usage
 part-is.suseOS-zVSI: Virtual Server for VPC zVSI SUSE License
 part-is.zvsi-SE-ram-hours: VIrtual Server for VPC zVSI Memory Usage
-
-
-
-
-
-
-
-
+D00QMZX: IBM LogAnalysis with LogDNA
+D010IZX: Activity Tracker with LogDNA
+D00NGZX: Simulated Instruments Analytics API Standard
+D00GRZX: Knowledge Catalog
+D00UGZX: Knowledge Catalog INSTANCES
+D001QZX: Monitoring Premium DATA_POINTS_PER_MONTH
+D00L0ZX: SQL Query standard
+D01GCZX: Hyper Protect Crypto Services
+D01HLZX: Event Streams Instance Hours Usage
+D01HMZX: Event Streams Gigabyes Transmitted Outbound
+D01JCZX: Portworx
+D01R4ZX: Container Service RHEL License
+D01R5ZX: Container Service RHEL license
+D01R9ZX: OpenShift Container Platform License
+D01U1ZX: Transit Gateway for VPC
+D02CIZX: Event Streams enterprise 3 nodes
+D02GSZX: DashDb for Transactions GB Hours
+D02GTZX: DashDb for Transactions Instance Hours
+D02GUZX: DashDB for Transactions Processor Core Hours
+D02GVZX: DashDB for Transactions Private Instance Hours
+D02GWZX: DashDb for Transactions EU Instance Hours
+D02GXZX: DashDb for Transactions Enterprise Private GB Hours
+D02GYZX: Dashdb for Transactions dashDB Nebula GB Hours
+D02GZZX: Dashdb for Transactions dashDB Nebula Instance Hours
+D08XAZX: Secrets Manager Standard Instances
+D20KILL: IBM Cloud Monitoring
