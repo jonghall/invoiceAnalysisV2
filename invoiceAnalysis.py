@@ -1981,7 +1981,7 @@ def getBSS():
         worksheet.set_column("G:I", 18, format2)
         worksheet.set_column("H:I", 18, format4)
         return
-    def createUsageSummaryTab(paasUsage, month):
+    def createUsageSummaryTab(paasUsage):
         logging.info("Creating Usage Summary tab.")
         usageSummary = pd.pivot_table(paasUsage, index=["resource_name"],
                                       columns=["month"],
@@ -1990,8 +1990,8 @@ def getBSS():
                                       fill_value=0)
         new_order = ["rated_cost", "cost"]
         usageSummary = usageSummary.reindex(new_order, axis=1, level=0)
-        usageSummary.to_excel(writer, '{}_Cloud_Usage'.format(month))
-        worksheet = writer.sheets['{}_Cloud_Usage'.format(month)]
+        usageSummary.to_excel(writer, 'Cloud_Usage')
+        worksheet = writer.sheets['Cloud_Usage']
         format1 = workbook.add_format({'num_format': '$#,##0.00'})
         format2 = workbook.add_format({'align': 'left'})
         worksheet.set_column("A:A", 35, format2)
@@ -2012,18 +2012,21 @@ def getBSS():
     """
     Gather both account and instance level usage using Cloud SDK
     """
+    bssStartDate = startdate - relativedelta(months=2)
     bssEndDate = enddate - relativedelta(months=2)
-    accountUsage = getAccountUsage(bssEndDate, bssEndDate)
-    instancesUsage = getInstancesUsage(bssEndDate, bssEndDate)
+    accountUsage = getAccountUsage(bssStartDate, bssEndDate)
+    instancesUsage = getInstancesUsage(bssStartDate, bssEndDate)
 
-    createUsageSummaryTab(accountUsage, bssEndDate.strftime("%Y-%m"))
-    """
-    Create VPC Related Tabs
-    """
-    servers = instancesUsage.query('service_id == "is.instance" or service_id == "is.bare-metal-server"')
-    createChargesbyServer(servers, bssEndDate.strftime("%Y-%m"))
-    storage = instancesUsage.query('service_id == "is.volume"')
-    createChargesbyVolume(storage, bssEndDate.strftime("%Y-%m"))
+    createUsageSummaryTab(accountUsage)
+    months = instancesUsage.month.unique()
+    for i in months:
+        """
+        Create VPC Related Tabs
+        """
+        servers = instancesUsage.query('(service_id == "is.instance" or service_id == "is.bare-metal-server") and month == @i')
+        createChargesbyServer(servers, i)
+        storage = instancesUsage.query('service_id == "is.volume" and month == @i')
+        createChargesbyVolume(storage, i)
     return
 
 if __name__ == "__main__":
