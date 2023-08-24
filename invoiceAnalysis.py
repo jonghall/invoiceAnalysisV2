@@ -1216,7 +1216,7 @@ def createType2Report(filename, classicUsage):
                 worksheet.set_column("G:G", 70, format2)
                 worksheet.set_column("H:ZZ", 18, format1)
 
-                logging.info("Creating PaaS Detail for{}.".format(i))
+                logging.info("Creating Platform as a Service Detail for {}.".format(i))
                 """
                 Include all divisions that are not considered IaaS.  Exceptions: D026XZX DNS appears on IaaS invoice even though not in IaaS division
                 """
@@ -1241,7 +1241,7 @@ def createType2Report(filename, classicUsage):
                     paasSummary.to_excel(writer, 'TopSheet_{}'.format(i),startcol=0, startrow=startrow)
                     worksheet.write(startrow-1,0, "Platform as a Service Charges appearing in {}".format(i), boldtext)
 
-                creditItems = classicUsage.query('IBM_Invoice_Month == @i and Type == "CREDIT"').copy()
+                creditItems = classicUsage.query('Type == "CREDIT" and IBM_Invoice_Month == @i').copy()
 
                 if len(creditItems) > 0:
                     startrow = startrow + len(paasSummary.index) + 4
