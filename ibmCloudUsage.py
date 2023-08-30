@@ -337,9 +337,6 @@ def getInstancesUsage(start,end):
                     "resource_group_name": instance["resource_group_name"],
                     "instance_name": instance["resource_instance_name"]
                 }
-                if "crn:v1" in instance["resource_instance_name"]:
-                    print (instance)
-                    quit(1)
 
                 """
                 Get additional resource instance detail
@@ -696,6 +693,36 @@ def createChargesbyVolume(volumes, month):
     worksheet.set_column("G:I", 18, format2)
     worksheet.set_column("H:I", 18, format4)
     return
+def createChargesCOSInstance(cos, month):
+    """
+    Create Table of COS INstances with Charge metrics
+    """
+
+    logging.info("Calculating COS Instance charges.")
+
+    cos = cos.query('month == @month')
+    cos = pd.pivot_table(cos, index=["region", "resource_group_name", "instance_name", "plan_name", "metric", "unit", "quantity"],
+                             values=["cost", "rated_cost"],
+                             aggfunc={"cost": np.sum, "rated_cost": np.sum},
+                             margins=True, margins_name="Total",
+                             fill_value=0)
+
+    new_order = ["rated_cost", "cost"]
+    cos = cos.reindex(new_order, axis=1)
+
+    cos.to_excel(writer, '{}_COS_List'.format(month))
+    worksheet = writer.sheets['{}_COS_List'.format(month)]
+    format2 = workbook.add_format({'align': 'left'})
+    format3 = workbook.add_format({'num_format': '#,##0'})
+    format4 = workbook.add_format({'num_format': '$#,##0.00'})
+    worksheet.set_column("A:A", 15, format2)
+    worksheet.set_column("B:D", 30, format2)
+    worksheet.set_column("E:E", 40, format2)
+    worksheet.set_column("F:F", 18, format2)
+    worksheet.set_column("G:G", 18, format3)
+    worksheet.set_column("H:I", 18, format4)
+    return
+
 def createVirtualServerTab(servers, month):
     """
     Create Pivot by Original Provision Date for current servers
@@ -751,7 +778,7 @@ def createBMServerTab(servers, month):
 
     def createChargesbyVolume(volumes, month):
         """
-        Create BM VCPU deployed by role, account, and az
+        Create BM VCPU deployed by role  tag
         """
 
         logging.info("Calculating Block Volumes deployed.")
@@ -893,6 +920,7 @@ if __name__ == "__main__":
     parser.add_argument("--save", action=argparse.BooleanOptionalAction, help="Store dataframes to pkl files for testing purposes.")
     parser.add_argument("--months", default=os.environ.get('months', 1), help="Number of months including current month to include in report.")
     parser.add_argument("--vpc", action=argparse.BooleanOptionalAction, help="Include additional VPC analysis tabs.")
+    parser.add_argument("--cosinstances", action=argparse.BooleanOptionalAction, help="Include additional COS Instance Detail.")
     parser.add_argument("-s", "--startdate", default=os.environ.get('startdate', None), help="Start Year & Month in format YYYY-MM")
     parser.add_argument("-e", "--enddate", default=os.environ.get('enddate', None), help="End Year & Month in format YYYY-MM")
     parser.add_argument("--cos", "--COS", action=argparse.BooleanOptionalAction, help="Write output to COS bucket destination specified.")
@@ -962,6 +990,15 @@ if __name__ == "__main__":
     createInstancesDetailTab(instancesUsage)
     createUsageSummaryTab(accountUsage)
     createMetricSummary(accountUsage)
+    if args.cosinstances:
+        """
+        Create COS Detail tab
+        """
+        cos = instancesUsage.query('service_name == "Cloud Object Storage"')
+        months = instancesUsage.month.unique()
+        for i in months:
+            createChargesCOSInstance(cos,i)
+
     if args.vpc:
         """
         Create VPC Server Tabs
@@ -972,11 +1009,11 @@ if __name__ == "__main__":
         months = instancesUsage.month.unique()
 
         for i in months:
+            """ create VPC Virtual Server & BM Server detail"""
             createChargesbyServer(servers,i)
             createVirtualServerTab(servers, i)
             createBMServerTab(servers, i)
             """ Create VPC Volume Tabs"""
-
             createChargesbyVolume(storage, i)
             createVolumeSummary(storage, i)
 
