@@ -701,13 +701,13 @@ def createChargesCOSInstance(cos, month):
     logging.info("Calculating COS Instance charges.")
 
     cos = cos.query('month == @month')
-    cos = pd.pivot_table(cos, index=["region", "resource_group_name", "instance_name", "plan_name", "metric", "unit", "quantity"],
-                             values=["cost", "rated_cost"],
-                             aggfunc={"cost": np.sum, "rated_cost": np.sum},
+    cos = pd.pivot_table(cos, index=["resource_group_name", "instance_name", "region", "plan_name", "metric", "unit", "quantity"],
+                             values=["cost"],
+                             aggfunc={"cost": np.sum},
                              margins=True, margins_name="Total",
                              fill_value=0)
 
-    new_order = ["rated_cost", "cost"]
+    new_order = ["cost"]
     cos = cos.reindex(new_order, axis=1)
 
     cos.to_excel(writer, '{}_COS_List'.format(month))
