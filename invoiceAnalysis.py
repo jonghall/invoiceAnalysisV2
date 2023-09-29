@@ -600,10 +600,9 @@ def getInvoiceDetail(startdate, enddate):
 
     return df
 
-def createType1Report(filename, classicUsage):
+def createOldFormatReport(filename, classicUsage):
     """
-    Type 1 Output meets the majority of SLIC account setup.
-    Break out of invoice data is based on a traditional IaaS vs PaaS view.
+    Old format is breaks out SLIC account billing by IaaS vs PaaS on two seperate invoices.  This has been superceded by the newformat which breaks along product code lines
     IaaS Top Sheet Detail is split by all classic Infrastructure broken out by IMS Invoice, with splits for VMware Licensing, Classic Object Storage, and all other IaaS
     PaaS Top Sheet Detail is atches the definition of IMS as any usage billed through IMS from DSW.  Additional detail is provided to assist in reconcilation
 
@@ -1060,14 +1059,11 @@ def createType1Report(filename, classicUsage):
     writer.close()
     return
 
-def createType2Report(filename, classicUsage):
+def createNewFormatReport(filename, classicUsage):
 
     """
-    Type 2 Output meets the setup of SLIC accounts who have manual billing and/or multiple worknumbers associated.
-    Break out of invoice data is based on "D Code" offering detail.
-    The IaaS_YYYY-MM.  Items with the same INV_PRODID will appear as a single item on the CFTS invoice & Classic Infra by Category.
-    The PaaS_YYYY-MM.  Items that have a PaaS CoS DCode appear a child level.
-
+    New Format Output breaks out invoices at a product code level.  IaaS and PaaS are more accurately reflected on invoices.
+    Though CFTS physical invoices received are seperate for IaaS vs PaaS the breakdown is combined onto one tab.
     """
     def createDetailTab(classicUsage):
         """
@@ -2055,7 +2051,7 @@ if __name__ == "__main__":
     parser.add_argument("--sendGridSubject", default=os.environ.get('sendGridSubject', None), help="SendGrid email subject for output email")
     parser.add_argument("--output", default=os.environ.get('output', 'invoice-analysis.xlsx'), help="Filename Excel output file. (including extension of .xlsx)")
     parser.add_argument("--SL_PRIVATE", default=False, action=argparse.BooleanOptionalAction, help="Use IBM Cloud Classic Private API Endpoint")
-    parser.add_argument('--type2', default=False, action=argparse.BooleanOptionalAction, help="Break out detail by 'D codes' consistent with CFTS Sprint process used for multiple work numbers.")
+    parser.add_argument('--oldFormat', default=False, action=argparse.BooleanOptionalAction, help="Break out detail by 'D codes' consistent with CFTS Sprint process used for multiple work numbers.")
     parser.add_argument('--storage', default=False, action=argparse.BooleanOptionalAction, help="Include File, BLock and Classic Cloud Object Storage detail analysis.")
     parser.add_argument('--detail', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write detail tabs to worksheet.")
     parser.add_argument('--summary', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write summary tabs to worksheet.")
@@ -2075,7 +2071,7 @@ if __name__ == "__main__":
 
     """Set Flags to determine which Tabs are created in output"""
     storageFlag = args.storage
-    type2Flag = args.type2
+    oldFormatFlag = args.oldFormat
     detailFlag = args.detail
     summaryFlag = args.summary
     reconciliationFlag = args.reconciliation
@@ -2160,10 +2156,10 @@ if __name__ == "__main__":
     """"
     Build Exel Report Report with Charges
     """
-    if type2Flag:
-        createType2Report(args.output, classicUsage)
+    if oldFormatFlag:
+        createOldFormatReport(args.output, classicUsage)
     else:
-        createType1Report(args.output, classicUsage)
+        createNewFormatReport(args.output, classicUsage)
 
     if args.sendGridApi != None:
         sendEmail(startdate, enddate, args.sendGridTo, args.sendGridFrom, args.sendGridSubject, args.sendGridApi, args.output)
