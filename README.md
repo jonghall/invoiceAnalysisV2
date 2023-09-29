@@ -2,9 +2,9 @@
 This repository is a set of usage and billing scripts for IBM Cloud Classic Infrastructure and IBM Cloud that enable users to pull current and historical usage data and organize it in a meaningful way.
 
 ## Table of Contents
-3. [Package Installation](#package-installation-instructions)
-4. [Classic Invoice Analysis](invoiceAnalysi.md)
-5. [IBM Cloud Usage Analysis](ibmCloudUsage.md)
+1. [Package Installation](#package-installation-instructions)
+2. [Classic Invoice Analysis](invoiceAnalysi.md)
+3. [IBM Cloud Usage Analysis](ibmCloudUsage.md)
 4. [Other useful Scripts](other-scripts.md)
 
 
