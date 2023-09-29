@@ -95,13 +95,14 @@ usage: invoiceAnalysis.py [-h] [-k IC_API_KEY] [-u username] [-p password] [-a a
 | --sendGridSubject           | sendGridSubject      | None                  | SendGrid email subject.       
 | --output                    | output               | invoice-analysis.xlsx | Output file name used.        
 | --SL_PRIVATE                |                      | --no_SL_PRIVATE       | Whether to use Public or Private Endpoint. 
-| [--oldFormat](oldFormat.md) |                      | --no_type2            | Specify Type 2 output (future format, not currently widely used)
+| [--oldFormat](oldFormat.md) |                      | --no_oldFormat        | Specify old Format of output.
 | --storage                   |                      | --no_storage          | Whether to write additional level of classic Block & File storage analysis to worksheet (default: False) 
 | --no-summary                |                      | --summary             | Whether to write summary detail tabs to worksheet. (default: True)
 | --no-detail                 |                      | --detail              | Whether to Write detail tabs to worksheet. (default: True)
 | --no-reconciliation         |                      | --reconciliation      | Whether to write invoice reconciliation tabs to worksheet. (default: True)
 | --no-serverdetail           |                      | --serverdetail        | Whether to write server detail tabs to worksheet (default: True)
 | --cosdetail                 |                      | --no-cosdetail        | Whether to write Classic OBject Storage tab to worksheet (default: False)
+| --bss                       |                      | --no-bss              | Include IBM Cloud BSS Metered Service detail tabs
 
 ### Examples
 
