@@ -3,7 +3,7 @@ This repository is a set of usage and billing scripts for IBM Cloud Classic Infr
 
 ## Table of Contents
 1. [Package Installation](#package-installation-instructions)
-2. [Classic Invoice Analysis](invoiceAnalyss.md)
+2. [Classic Invoice Analysis](invoiceAnalysis.md)
 3. [IBM Cloud Usage Analysis](ibmCloudUsage.md)
 4. [Other useful Scripts](other-scripts.md)
 
@@ -15,9 +15,12 @@ This repository is a set of usage and billing scripts for IBM Cloud Classic Infr
 ````
 $ pip install -r requirements.txt
 ````
-3. For *Internal IBM IMS users* (employees) who wish to use internal credentials (with Yubikey 2FA) you must first manually uninstall the Public SoftLayer SDK and manually 
-build the internal SDK for this script to function properly with internal credentials.  While running script you must be connected securely to IBM network via Global Protect VPN.
-You will be prompted for your 2FA yubikey at each script execution.  Note you must invclude IMS account number in environment variable or command line.   [Internal SDK & Instructions](https://github.ibm.com/SoftLayer/internal-softlayer-cli)
+
+For *Internal IBM IMS users* (IBM employees) who wish to use their internal credentials (with Yubikey 2FA) and have requires access you must first manually uninstall the Public SoftLayer SDK and manually 
+build the internal SDK for this script to function properly with internal credentials.  While running script you must also be first connected securely to IBM network via Global Protect VPN.
+You will be prompted for your 2FA yubikey at each script execution.  Note you must include IMS account number in environment variable or command line.   [Internal SDK & Instructions](https://github.ibm.com/SoftLayer/internal-softlayer-cli)
+
+Note Internal IMS access onyl works with Classic Infrastructure and the Softlayer SDK.  It does not work with IBM Cloud Usage scripts or utilities.
 ```azure
 $ pip uninstall SoftLayer
 $ git clone https://github.ibm.com/SoftLayer/internal-softlayer-cli
