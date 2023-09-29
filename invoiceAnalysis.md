@@ -1,8 +1,10 @@
 # invoiceAnalysis.py
 
 *invoiceAnalysis.py* collects IBM Cloud Classic Infrastructure NEW, RECURRING, ONE-TIME-CHARGES and CREDIT invoices between invoice months
-specified, then consolidates the data into an Excel worksheet for billing analysis.  All charges are aligned to the IBM SLIC/CFTS invoice cycle of the 20th to 19th of a month.
-In addition to consolidation of the detailed data and formatting consistent with SLIC/CFTS invoices, pivot tables are created to aid in reconilliation of invoices charges and month to month comparisons.
+specified, then consolidates the data into an Excel worksheet for billing analysis and reconciliation.  For accounts with SLIC billing all charges
+are aligned to the IBM Invoice Online invoice cycle which consolidated IBM Classic Infrastructure invoices from the 20th of the previous month to 19th
+of the next month.   In addition to consolidation of the detailed data and formatting consistent with IBM Online Invoices, additional pivot tables are
+created to aid in understanding IBM Cloud usage charges and month to month comparisons.
 
 ## Table of Contents
 1. [Identity and Access Management Requirements](#identity-&-access-management-requirements)
@@ -20,9 +22,7 @@ In addition to consolidation of the detailed data and formatting consistent with
 
 
 ## Output Description
-The output generated provides several tables for facilitating reconciliation of billing that correspond to the monthly invoice cycle for SLIC accounts.   SLIC billing consolidates IBM Classic Infrastructure invoices from the 20th of the
-previous month to the 19th of the current month.  SLIC invoices are received via IBM Invoices Online on the 2nd to last business day of each month and contain one invoice for IaaS, one invoice for PaaS, and one invoice for Credits.  The
-output of this script helps in the reconciliation of those invoices.
+The output generated provides several tables for facilitating reconciliation of billing that correspond to the monthly invoice cycle for SLIC accounts.   
 
 ### Detail Tabs
 | Tab Name      | Default | flag to change default| Description of Tab 
@@ -34,7 +34,7 @@ One tab is created for each month in range specified and used for reconciliation
 
 | Tab Name         | Default | flag to change default| Description of Tab 
 |------------------|--------|----------------------|-------------------
-| TopSheet_YYYY-MM | True | --no-reconcilliation | Table matching the IaaS, PaaS and Credits from the matching invoices on IBM Invoices Online. Each row provides the corresponding detail for the charge, such as the portal invoice number, invoice type, invoice date, service dates, product code, product description, and the amount.  This view is used to reconcile against the invoice. 
+| TopSheet_YYYY-MM | True | --no-reconcilliation | Table matching the IaaS, PaaS and Credits from the matching invoices in IBM Invoices Online.  Each row provides the corresponding detail for the charge, such as the portal invoice number, invoice type, invoice date, service dates, product code, product description, and the amount.  This view is used to reconcile against the invoice. 
 
 
 ### Summary Tabs
