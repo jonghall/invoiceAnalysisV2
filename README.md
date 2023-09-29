@@ -8,7 +8,8 @@ In addition to consolidation of the detailed data and formatting consistent with
 2. [Output Description](#output-description)
 3. [Script Installation](#script-installation-instructions)
 3. [Script Execution](#script-execution-instructions)
-4. [Other included Scripts](other-scripts.md)
+4. [IBM Cloud Usage Scripts](ibmcloudusage.md)
+4. [Other ClassicUsage Scripts](other-scripts.md)
 5. [Code Engine: Configuring Invoice Analysis Report to automatically produce output each month](#running-invoice-analysis-report-as-a-code-engine-job)
 
 ## Identity & Access Management Requirements
