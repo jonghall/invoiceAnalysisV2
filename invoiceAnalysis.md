@@ -68,6 +68,14 @@ RECURRING invoice each month as a line item, but are for usage two months prior.
 
 ## Script Execution Instructions
 
+```bazaar
+python invoiceAnalysis.py --help
+usage: invoiceAnalysis.py [-h] [-k IC_API_KEY] [-u username] [-p password] [-a account] [-s STARTDATE] [-e ENDDATE] [--debug | --no-debug] [--load | --no-load] [--save | --no-save] [--months MONTHS] [--COS_APIKEY COS_APIKEY] [--COS_ENDPOINT COS_ENDPOINT] [--COS_INSTANCE_CRN COS_INSTANCE_CRN]
+                          [--COS_BUCKET COS_BUCKET] [--sendGridApi SENDGRIDAPI] [--sendGridTo SENDGRIDTO] [--sendGridFrom SENDGRIDFROM] [--sendGridSubject SENDGRIDSUBJECT] [--output OUTPUT] [--SL_PRIVATE | --no-SL_PRIVATE] [--oldFormat | --no-oldFormat] [--storage | --no-storage]
+                          [--detail | --no-detail] [--summary | --no-summary] [--reconciliation | --no-reconciliation] [--serverdetail | --no-serverdetail] [--cosdetail | --no-cosdetail] [--bss | --no-bss]
+```
+
+### Command Line Parameters
 | Parameter                   | Environment Variable | Default               | Description                   
 |-----------------------------|----------------------|-----------------------|-------------------------------
 | --IC_API_KEY, -k            | IC_API_KEY           | None                  | IBM Cloud API Key to be used to retrieve invoices and usage. 
@@ -95,7 +103,8 @@ RECURRING invoice each month as a line item, but are for usage two months prior.
 | --no-serverdetail           |                      | --serverdetail        | Whether to write server detail tabs to worksheet (default: True)
 | --cosdetail                 |                      | --no-cosdetail        | Whether to write Classic OBject Storage tab to worksheet (default: False)
 
-1. Run Python script (Python 3.9+ required).</br>
+### Examples
+
 To analyze invoices between two months.
 ```bazaar
 $ export IC_API_KEY=<ibm cloud apikey>
@@ -105,64 +114,6 @@ To analyze last 3 invoices.
 ```bazaar
 $ export IC_API_KEY=<ibm cloud apikey>
 $ python inboiceAnalysis.py -m 3
-```
-```bazaar
-usage: invoiceAnalysis.py [-h] [-k IC_API_KEY] [-u username] [-p password] [-a account] [-s STARTDATE] [-e ENDDATE] [--months MONTHS] [--COS_APIKEY COS_APIKEY] [--COS_ENDPOINT COS_ENDPOINT] [--COS_INSTANCE_CRN COS_INSTANCE_CRN] [--COS_BUCKET COS_BUCKET] [--sendGridApi SENDGRIDAPI]
-                          [--sendGridTo SENDGRIDTO] [--sendGridFrom SENDGRIDFROM] [--sendGridSubject SENDGRIDSUBJECT] [--output OUTPUT] [--SL_PRIVATE | --no-SL_PRIVATE] [--type2 | --no-type2] [--storage | --no-storage] [--detail | --no-detail] [--summary | --no-summary]
-                          [--reconciliation | --no-reconciliation] [--serverdetail | --no-serverdetail] [--cosdetail | --no-cosdetail]
-
-Export usage detail by invoice month to an Excel file for all IBM Cloud Classic invoices and corresponding lsPaaS Consumption.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -k IC_API_KEY         IBM Cloud API Key
-  -u username, --username username
-                        IBM IMS Userid
-  -p password, --password password
-                        IBM IMS Password
-  -a account, --account account
-                        IMS Account
-  -s STARTDATE, --startdate STARTDATE
-                        Start Year & Month in format YYYY-MM
-  -e ENDDATE, --enddate ENDDATE
-                        End Year & Month in format YYYY-MM
-  --months MONTHS       Number of months including last full month to include in report.
-  --COS_APIKEY COS_APIKEY
-                        COS apikey to use for Object Storage.
-  --COS_ENDPOINT COS_ENDPOINT
-                        COS endpoint to use for Object Storage.
-  --COS_INSTANCE_CRN COS_INSTANCE_CRN
-                        COS Instance CRN to use for file upload.
-  --COS_BUCKET COS_BUCKET
-                        COS Bucket name to use for file upload.
-  --sendGridApi SENDGRIDAPI
-                        SendGrid ApiKey used to email output.
-  --sendGridTo SENDGRIDTO
-                        SendGrid comma deliminated list of emails to send output to.
-  --sendGridFrom SENDGRIDFROM
-                        Sendgrid from email to send output from.
-  --sendGridSubject SENDGRIDSUBJECT
-                        SendGrid email subject for output email
-  --output OUTPUT       Filename Excel output file. (including extension of .xlsx)
-  --SL_PRIVATE, --no-SL_PRIVATE
-                        Use IBM Cloud Classic Private API Endpoint (default: False)
-  --oldFormat --no-oldFormat   Use old format for splitting line items. (default: False)
-  --storage, --no-storage
-                        Include File, BLock and Classic Cloud Object Storage detail analysis. (default: False)
-  --detail, --no-detail
-                        Whether to Write detail tabs to worksheet. (default: True)
-  --summary, --no-summary
-                        Whether to Write summarytabs to worksheet. (default: True)
-  --reconciliation, --no-reconciliation
-                        Whether to write invoice reconciliation tabs to worksheet. (default: True)
-  --serverdetail, --no-serverdetail
-                        Whether to write server detail tabs to worksheet. (default: True)
-  --cosdetail, --no-cosdetail
-                        Whether to write Classic OBject Storage tab to worksheet. (default: False)
-  --bss, --no-bss
-                        Provide corresponding BSS level of detail for VPC Virtual Servers and Storage (requires IBM APIKEY with access to IBM Cloud Usage)
-
-
 ```
 
 ## Running Invoice Analysis Report as a Code Engine Job
