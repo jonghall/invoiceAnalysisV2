@@ -3,7 +3,7 @@ This repository is a set of usage and billing scripts for IBM Cloud Classic Infr
 
 ## Table of Contents
 1. [Package Installation](#package-installation-instructions)
-2. [Classic Invoice Analysis](invoiceAnalysi.md)
+2. [Classic Invoice Analysis](invoiceAnalyss.md)
 3. [IBM Cloud Usage Analysis](ibmCloudUsage.md)
 4. [Other useful Scripts](other-scripts.md)
 
