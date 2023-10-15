@@ -1424,7 +1424,6 @@ def getBSS():
             quit(1)
 
         try:
-
             usage_reports_service = UsageReportsV4(authenticator=authenticator)
             usage_reports_service.enable_retries(max_retries=5, retry_interval=1.0)
             usage_reports_service.set_http_config({'timeout': 120})
@@ -1670,10 +1669,20 @@ def getBSS():
                     else:
                         pricing_region = ""
 
+                    if "resource_group_id" in instance:
+                        resource_group_id = instance["resource_group_id"]
+                    else:
+                        resource_group_id = ""
+
+                    if "resource_group_name" in instance:
+                        resource_group_name = instance["resource_group_name"]
+                    else:
+                        resource_group_name = ""
+
                     row = {
                         "account_id": instance["account_id"],
                         "instance_id": instance["resource_instance_id"],
-                        "resource_group_id": instance["resource_group_id"],
+                        "resource_group_id": resource_group_id,
                         "month": instance["month"],
                         "pricing_country": pricing_country,
                         "billing_country": billing_country,
@@ -1686,7 +1695,7 @@ def getBSS():
                         "region": instance["region"],
                         "service_id": instance["resource_id"],
                         "service_name": instance["resource_name"],
-                        "resource_group_name": instance["resource_group_name"],
+                        "resource_group_name": resource_group_name,
                         "instance_name": instance["resource_instance_name"]
                     }
 
@@ -2008,7 +2017,7 @@ def getBSS():
     """
     Gather both account and instance level usage using Cloud SDK
     """
-    bssStartDate = startdate - relativedelta(months=2)
+    bssStartDate = startdate - relativedelta(months=1)
     bssEndDate = enddate - relativedelta(months=2)
     accountUsage = getAccountUsage(bssStartDate, bssEndDate)
     instancesUsage = getInstancesUsage(bssStartDate, bssEndDate)

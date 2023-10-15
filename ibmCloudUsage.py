@@ -729,7 +729,7 @@ def createVirtualServerTab(servers, month):
     """
 
     """ Query only virtual CPU,  VCPU metric and last month so it calculates current total VCPU """
-    servers = servers.query('service_id == "is.instance" and metric == "VCPU_HOURS" and month == @month')
+    servers = servers.query('service_id == "is.instance" and metric == "VCPU_HOURS" and month == @month and (lifecycleAction == "Start" or lifecycleAction == "Stop")')
 
     logging.info("Calculating current Virtual Server vCPU by provision date.")
 
@@ -776,35 +776,6 @@ def createBMServerTab(servers, month):
     worksheet.set_column("H:J", 18, format3)
     return
 
-    def createChargesbyVolume(volumes, month):
-        """
-        Create BM VCPU deployed by role  tag
-        """
-
-        logging.info("Calculating Block Volumes deployed.")
-        """ Query """
-        volumes = volumes.query('metric == "GIGABYTE_HOURS" and month == @month')
-        volumes = pd.pivot_table(volumes, index=["region", "service_name", "resource_group_name", "instance_name", "instance_id", "capacity", "iops"],
-                                 values=["cost", "rated_cost"],
-                                 aggfunc={"cost": np.sum, "rated_cost": np.sum},
-                                 margins=True, margins_name="Total",
-                                 fill_value=0)
-
-        new_order = ["rated_cost", "cost"]
-        volumes = volumes.reindex(new_order, axis=1)
-        volumes.to_excel(writer, '{}_VPC_Volumes'.format(month))
-        worksheet = writer.sheets['{}_VPC_Volumes'.format(month)]
-        format2 = workbook.add_format({'align': 'left'})
-        format3 = workbook.add_format({'num_format': '#,##0'})
-        format4 = workbook.add_format({'num_format': '$#,##0.00'})
-        worksheet.set_column("A:A", 15, format2)
-        worksheet.set_column("B:C", 30, format2)
-        worksheet.set_column("D:D", 40, format2)
-        worksheet.set_column("E:E", 120, format2)
-        worksheet.set_column("F:F", 18, format2)
-        worksheet.set_column("G:I", 18, format2)
-        worksheet.set_column("H:I", 18, format4)
-        return
 def createVolumeSummary(volumes, month):
     """
     Create BM VCPU deployed by role, account, and az
