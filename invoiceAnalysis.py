@@ -1283,6 +1283,82 @@ def createNewFormatReport(filename, classicUsage):
                 worksheet.set_column("E:ZZ", 18, format_usdollar)
 
         return
+    def createHourlyVirtualServers(classicUsage):
+        """
+        Build a pivot table for Hourly VSI's with totalRecurringCharges
+        """
+        virtualServers = classicUsage.query('Category == ["Computing Instance"] and Hourly == [True]')
+        if len(virtualServers) > 0:
+            logging.info("Creating Hourly VSI Tab.")
+            virtualServerPivot = pd.pivot_table(virtualServers, index=["Description", "OS"],
+                                                values=["Hours", "totalRecurringCharge"],
+                                                columns=['IBM_Invoice_Month'],
+                                                aggfunc={'Description': len, 'Hours': np.sum,
+                                                         'totalRecurringCharge': np.sum}, fill_value=0). \
+                rename(columns={"Description": 'qty', 'Hours': 'Total Hours', 'totalRecurringCharge': 'TotalRecurring'})
+
+            virtualServerPivot.to_excel(writer, 'HrlyVirtualServers')
+            format_leftjustify = workbook.add_format()
+            format_leftjustify.set_align('left')
+            worksheet = writer.sheets['HrlyVirtualServers']
+            worksheet.set_column('A:B', 40, format_leftjustify)
+
+        return
+    def createMonthlyVirtualServers(classicUsage):
+        """
+        Build a pivot table for Monthly VSI's with totalRecurringCharges
+        """
+        monthlyVirtualServers = classicUsage.query('Category == ["Computing Instance"] and Hourly == [False]')
+        if len(monthlyVirtualServers) > 0:
+            logging.info("Creating Monthly VSI Tab.")
+            virtualServerPivot = pd.pivot_table(monthlyVirtualServers, index=["Description", "OS"],
+                                                values=["totalRecurringCharge"],
+                                                columns=['IBM_Invoice_Month'],
+                                                aggfunc={'Description': len, 'totalRecurringCharge': np.sum},
+                                                fill_value=0). \
+                rename(columns={"Description": 'qty', 'totalRecurringCharge': 'TotalRecurring'})
+            virtualServerPivot.to_excel(writer, 'MnthlyVirtualServers')
+            format_leftjustify = workbook.add_format()
+            format_leftjustify.set_align('left')
+            worksheet = writer.sheets['MnthlyVirtualServers']
+            worksheet.set_column('A:B', 40, format_leftjustify)
+        return
+    def createHourlyBareMetalServers(classicUsage):
+        """
+        Build a pivot table for Hourly Bare Metal with totalRecurringCharges
+        """
+        bareMetalServers = classicUsage.query('Category == ["Server"]and Hourly == [True]')
+        if len(bareMetalServers) > 0:
+            logging.info("Creating Hourly Bare Metal Tab.")
+            pivot = pd.pivot_table(bareMetalServers, index=["Description", "OS"],
+                                   values=["Hours", "totalRecurringCharge"],
+                                   columns=['IBM_Invoice_Month'],
+                                   aggfunc={'Description': len, 'totalRecurringCharge': np.sum}, fill_value=0). \
+                rename(columns={"Description": 'qty', 'Hours': np.sum, 'totalRecurringCharge': 'TotalRecurring'})
+            pivot.to_excel(writer, 'HrlyBaremetalServers')
+            format_leftjustify = workbook.add_format()
+            format_leftjustify.set_align('left')
+            worksheet = writer.sheets['HrlyBaremetalServers']
+            worksheet.set_column('A:B', 40, format_leftjustify)
+        return
+    def createMonthlyBareMetalServers(classicUsage):
+        """
+        Build a pivot table for Monthly Bare Metal with totalRecurringCharges
+        """
+        monthlyBareMetalServers = classicUsage.query('Category == ["Server"] and Hourly == [False]')
+        if len(monthlyBareMetalServers) > 0:
+            logging.info("Creating Monthly Bare Metal Tab.")
+            pivot = pd.pivot_table(monthlyBareMetalServers, index=["location", "Description", "OS"],
+                                   values=["totalRecurringCharge"],
+                                   columns=['IBM_Invoice_Month'],
+                                   aggfunc={'Description': len, 'totalRecurringCharge': np.sum}, fill_value=0). \
+                rename(columns={"Description": 'qty', 'totalRecurringCharge': 'TotalRecurring'})
+            pivot.to_excel(writer, 'MthlyBaremetalServers')
+            format_leftjustify = workbook.add_format()
+            format_leftjustify.set_align('left')
+            worksheet = writer.sheets['MthlyBaremetalServers']
+            worksheet.set_column('A:C', 40, format_leftjustify)
+        return
 
     global writer, workbook
 
@@ -1305,6 +1381,12 @@ def createNewFormatReport(filename, classicUsage):
         createCategoryGroupSummary(classicUsage)
         createCategooryDetail(classicUsage)
 
+    if serverDetailFlag:
+        createHourlyVirtualServers(classicUsage)
+        createMonthlyVirtualServers(classicUsage)
+        createHourlyBareMetalServers(classicUsage)
+        createMonthlyBareMetalServers(classicUsage)
+
     if cosdetailFlag:
         createClassicCOS(classicUsage)
 
@@ -1316,7 +1398,7 @@ def createNewFormatReport(filename, classicUsage):
         getBSS()
 
     writer.close()
-    
+
 def multi_part_upload(bucket_name, item_name, file_path):
     try:
         logging.info("Starting file transfer for {0} to bucket: {1}".format(item_name, bucket_name))
@@ -2065,7 +2147,7 @@ if __name__ == "__main__":
     parser.add_argument('--detail', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write detail tabs to worksheet.")
     parser.add_argument('--summary', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write summary tabs to worksheet.")
     parser.add_argument('--reconciliation', default=True, action=argparse.BooleanOptionalAction, help="Whether to write invoice reconciliation tabs to worksheet.")
-    parser.add_argument('--serverdetail', default=True, action=argparse.BooleanOptionalAction, help="Whether to write server detail tabs to worksheet.")
+    parser.add_argument('--serverdetail', default=False, action=argparse.BooleanOptionalAction, help="Whether to write server detail tabs to worksheet.")
     parser.add_argument('--cosdetail', default=False, action=argparse.BooleanOptionalAction, help="Whether to write Classic Object Storage tab to worksheet.")
     parser.add_argument('--bss', default=False, action=argparse.BooleanOptionalAction, help="Retreive BSS usage for corresponding months using ibmCloudUsage.py.")
 
