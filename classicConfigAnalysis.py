@@ -89,6 +89,7 @@ def getinventory():
 
             # FIND INFORMATION ABOUT PUBLIC (FRONTEND) INTERFACES
             frontendnetworkcomponents = []
+            frontend_primarySubnet = ""
             for frontend in hardware['frontendNetworkComponents']:
                 if frontend['name'] == "eth":
                     frontendnetworkcomponent = frontend
