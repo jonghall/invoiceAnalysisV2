@@ -1240,7 +1240,11 @@ def createNewFormatReport(filename, classicUsage):
                 creditItems = classicUsage.query('Type == "CREDIT" and IBM_Invoice_Month == @i').copy()
 
                 if len(creditItems) > 0:
-                    startrow = startrow + len(paasSummary.index) + 4
+                    if len(paasRecords) > 0:
+                        startrow = startrow + len(paasSummary.index) + 4
+                    else:
+                        startrow = startrow + 4
+
                     logging.info("Creating Credit detail for {}.".format(i))
 
                     creditItems["lineItemCategory"] = creditItems["Category"]
