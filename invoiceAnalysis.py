@@ -1243,7 +1243,7 @@ def createNewFormatReport(filename, classicUsage):
                     if len(paasRecords) > 0:
                         startrow = startrow + len(paasSummary.index) + 4
                     else:
-                        startrow = startrow + 4
+                        startrow = len(iaasInvoice.index) + 5
 
                     logging.info("Creating Credit detail for {}.".format(i))
 
