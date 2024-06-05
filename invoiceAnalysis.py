@@ -1828,7 +1828,7 @@ def bulkReport():
     ims_username = args.username
     ims_password = args.password
     ims_yubikey = input("Yubi Key:")
-    SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
+    SL_ENDPOINT = "http://internal.applb.softlayer.local/v3.1/internal/xmlrpc"
     accountList = json.loads(os.getenv("accountList", "[]"))
     client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
     masterAccountList = pd.DataFrame()
@@ -1996,7 +1996,7 @@ if __name__ == "__main__":
                         else:
                             ims_account = args.account
                         ims_yubikey = input("Yubi Key:")
-                        SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
+                        SL_ENDPOINT = "http://internal.applb.softlayer.local/v3.1/internal/xmlrpc"
                         client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
                     else:
                         logging.error("Error!  Can't find internal credentials or ims account.")
