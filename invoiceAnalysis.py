@@ -126,7 +126,7 @@ def getUsers():
     """
     logging.info("Getting IMS account users.")
     try:
-        userList = client['Account'].getUsers(id=ims_account, mask='id,createDate, displayName, firstName, lastName, email, iamId, isMasterUserFlag, managedByOpenIdConnectFlag, modifyDate,'
+        userList = client['Account'].getUsers(id=ims_account, mask='id,accountId, companyName, createDate, displayName, firstName, lastName, email, iamId, isMasterUserFlag, managedByOpenIdConnectFlag, modifyDate,'
                                                                    ' openIdConnectUserName, sslVpnAllowedFlag, statusDate, username, userStatus, loginAttempts')
     except SoftLayer.SoftLayerAPIError as e:
         logging.error("Account::getUsers: %s, %s" % (e.faultCode, e.faultString))
@@ -135,6 +135,8 @@ def getUsers():
     data = []
     for user in userList:
         row = {
+            'accountId': user['accountId'],
+            'companyName': user['companyName'],
             'id': user['id'],
             'displayName': user['displayName'],
             'fistName': user['firstName'],
@@ -159,7 +161,7 @@ def getUsers():
         data.append(row.copy())
 
     """ create dataframe of users """
-    columns = ['id','displayName','fistName','LastName','createDate','modifyDate','statusDate','iamId','email','username','userStatus',
+    columns = ['accountId','companyName','id','displayName','fistName','LastName','createDate','modifyDate','statusDate','iamId','email','username','userStatus',
                 'isMasterUserFlag','managedByOpenConnectFlag','sslVpnAllowedFlag','lastLoginAttempt','lastLoginAttemptIpAddress', 'lastLoginAttemptSuccessFlag']
     df = pd.DataFrame(data, columns=columns)
     return df
@@ -1787,6 +1789,40 @@ def bulkReport():
 
     :return:
     """
+    def createMasterAccountDetailTab(accountDetail):
+        """
+        Write account to excel
+        """
+        logging.info("Creating account tab.")
+        accountDetail.to_excel(writer, sheet_name='AccountDetail')
+        format2 = workbook.add_format({'align': 'left'})
+        worksheet = writer.sheets['AccountDetail']
+        worksheet.set_column('A:A', 5, format2)
+        worksheet.set_column('B:B', 8, format2)
+        worksheet.set_column('C:C', 40, format2)
+        worksheet.set_column('D:D', 30, format2)
+        worksheet.set_column('E:E', 30, format2)
+        worksheet.set_column('F:F', 15, format2)
+        worksheet.set_column('G:I', 25, format2)
+        worksheet.set_column('J:J', 40, format2)
+        worksheet.set_column('K:K', 30, format2)
+        worksheet.set_column('L:L', 18, format2)
+        #totalrows,totalcols=accountDetail.shape
+        #worksheet.autofilter(0,0,totalrows,totalcols)
+        return
+    def createMaterUserTab(userList):
+        """
+        Write usertab to excel
+        """
+        logging.info("Creating user tab.")
+        userList.to_excel(writer, sheet_name='Users')
+        format2 = workbook.add_format({'align': 'left'})
+        worksheet = writer.sheets['Users']
+        worksheet.set_column('A:S', 20, format2)
+        totalrows,totalcols=userList.shape
+        worksheet.autofilter(0,0,totalrows,totalcols)
+        return
+
     accountList = json.loads(os.getenv("accountList", "[]"))
 
     ims_username = args.username
@@ -1795,14 +1831,17 @@ def bulkReport():
     SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
     accountList = json.loads(os.getenv("accountList", "[]"))
     client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
-
+    masterAccountList = pd.DataFrame()
+    masterUserList = pd.DataFrame()
 
     for ims_account in accountList:
         if accountFlag:
             accountDetail = getAccountDetail()
+            masterAccountList = pd.concat([masterAccountList, accountDetail], ignore_index=True)
 
         if userFlag:
             userList = getUsers()
+            masterUserList = pd.concat([masterUserList, userList], ignore_index=True)
 
         if storageFlag:
             networkStorageDF = getAccountNetworkStorage()
@@ -1824,6 +1863,24 @@ def bulkReport():
         createReport(file_name, classicUsage)
 
         # upload created file to COS if COS credentials provided
+        if args.COS_APIKEY != None:
+            cos = ibm_boto3.resource("s3",
+                                     ibm_api_key_id=args.COS_APIKEY,
+                                     ibm_service_instance_id=args.COS_INSTANCE_CRN,
+                                     config=Config(signature_version="oauth"),
+                                     endpoint_url=args.COS_ENDPOINT
+                                     )
+            multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
+
+        """ Create Master File of Account Info and Users for bulk list """
+        split_tup = os.path.splitext(args.output)
+        """ remove file extension """
+        file_name = split_tup[0] + "_master.xlsx"
+        writer = pd.ExcelWriter(file_name, engine='xlsxwriter')
+        workbook = writer.book
+        createMasterAccountDetailTab(masterAccountList)
+        createMaterUserTab(masterUserList)
+
         if args.COS_APIKEY != None:
             cos = ibm_boto3.resource("s3",
                                      ibm_api_key_id=args.COS_APIKEY,
