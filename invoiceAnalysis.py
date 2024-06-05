@@ -134,11 +134,16 @@ def getUsers():
 
     data = []
     for user in userList:
-        print(user)
         if 'companyName' in user:
             companyName = user['companyName']
         else:
             companyName = ""
+
+        if 'email' in user:
+            email = user['email']
+        else:
+            email = ""
+
         row = {
             'accountId': user['accountId'],
             'companyName': companyName,
@@ -150,7 +155,7 @@ def getUsers():
             'modifyDate': user['modifyDate'],
             'statusDate': user['statusDate'],
             'iamId': user['iamId'],
-            'email': user['email'],
+            'email': email,
             'username': user['username'],
             'userStatus': user['userStatus']['name'],
             'isMasterUserFlag': user['isMasterUserFlag'],
