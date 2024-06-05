@@ -86,6 +86,39 @@ def createEmployeeClient(end_point_employee, employee_user, passw, token):
     client_employee = SoftLayer.employee_client(username=employee_user, access_token=result['hash'], endpoint_url=end_point_employee)
     return client_employee
 
+def getAccountDetail():
+    """
+    retreive active users
+    :return:
+    """
+    logging.info("Getting IMS Account Detail.")
+    try:
+        account = client['Account'].getObject(id=ims_account, mask="id, companyName, country, email, accountLinks, accountStatus, activeAgreements, activeNotificationSubscribers,accountContacts, billingInfo,"
+                                                                         "bluemixAccountId, brand, inProgressExternalAccountSetup, datacentersWithSubnetAllocations,  attributes, bluemixAccountLink, internalNotes,"
+                                                                         "masterUser")
+    except SoftLayer.SoftLayerAPIError as e:
+        logging.error("Account::getObject: %s, %s" % (e.faultCode, e.faultString))
+        quit(1)
+
+    row = {
+        'id': account['id'],
+        'companyName': account['companyName'],
+        'email': account['email'],
+        'bluemixAccountId': account['bluemixAccountId'],
+        'accountStatus': account['accountStatus']['name'],
+        'billingInfoCreateDate': account['billingInfo']["createDate"],
+        'billingInfoCurrency': account['billingInfo']["currency"]['name'],
+        'brand': account['brand']["name"],
+        'internalNotes': account['internalNotes'],
+        'masterUserEmail': account['masterUser']['email'],
+        'masterUserIamId': account['masterUser']['iamId']
+    }
+
+    """ create dataframe of account detail """
+
+    df = pd.DataFrame([row], columns=list(row.keys()))
+    return df
+
 def getUsers():
     """
     retreive active users
@@ -93,7 +126,7 @@ def getUsers():
     """
     logging.info("Getting account users.")
     try:
-        userList = client['Account'].getUsers(id=ims_account, mask='id,companyName, createDate, displayName, firstName, lastName, email, iamId, isMasterUserFlag, managedByOpenIdConnectFlag, modifyDate,'
+        userList = client['Account'].getUsers(id=ims_account, mask='id,createDate, displayName, firstName, lastName, email, iamId, isMasterUserFlag, managedByOpenIdConnectFlag, modifyDate,'
                                                                    ' openIdConnectUserName, sslVpnAllowedFlag, statusDate, username, userStatus, loginAttempts')
     except SoftLayer.SoftLayerAPIError as e:
         logging.error("Account::getUsers: %s, %s" % (e.faultCode, e.faultString))
@@ -103,7 +136,6 @@ def getUsers():
     for user in userList:
         row = {
             'id': user['id'],
-            'companyName': user['companyName'],
             'displayName': user['displayName'],
             'fistName': user['firstName'],
             'LastName': user['lastName'],
@@ -127,7 +159,7 @@ def getUsers():
         data.append(row.copy())
 
     """ create dataframe of users """
-    columns = ['id','companyName','displayName','fistName','LastName','createDate','modifyDate','statusDate','iamId','email','username','userStatus',
+    columns = ['id','displayName','fistName','LastName','createDate','modifyDate','statusDate','iamId','email','username','userStatus',
                 'isMasterUserFlag','managedByOpenConnectFlag','sslVpnAllowedFlag','lastLoginAttempt','lastLoginAttemptIpAddress', 'lastLoginAttemptSuccessFlag']
     df = pd.DataFrame(data, columns=columns)
     return df
@@ -670,6 +702,27 @@ def createReport(filename, classicUsage):
         worksheet.autofilter(0,0,totalrows,totalcols)
         return
 
+    def createAccountDetailTab(accountDetail):
+        """
+        Write account to excel
+        """
+        logging.info("Creating account tab.")
+        accountDetail.to_excel(writer, sheet_name='AccountDetail')
+        format2 = workbook.add_format({'align': 'left'})
+        worksheet = writer.sheets['AccountDetail']
+        worksheet.set_column('A:A', 5, format2)
+        worksheet.set_column('B:B', 8, format2)
+        worksheet.set_column('C:C', 40, format2)
+        worksheet.set_column('D:D', 30, format2)
+        worksheet.set_column('E:E', 30, format2)
+        worksheet.set_column('F:F', 15, format2)
+        worksheet.set_column('G:I', 25, format2)
+        worksheet.set_column('J:J', 40, format2)
+        worksheet.set_column('K:K', 30, format2)
+        worksheet.set_column('L:L', 18, format2)
+        #totalrows,totalcols=accountDetail.shape
+        #worksheet.autofilter(0,0,totalrows,totalcols)
+        return
     def createUserTab(userList):
         """
         Write usertab to excel
@@ -976,11 +1029,12 @@ def createReport(filename, classicUsage):
     classicUsage["totalAmount"] = classicUsage["totalOneTimeAmount"] + classicUsage["totalRecurringCharge"] + classicUsage["childTotalRecurringCharge"]
 
     # create pivots for various tabs for Type2 SLIC based on flags
-    if detailFlag:
-        createDetailTab(classicUsage)
-
+    if accountFlag:
+        createAccountDetailTab(accountDetail)
     if userFlag:
         createUserTab(userList)
+    if detailFlag:
+        createDetailTab(classicUsage)
 
     if reconciliationFlag:
         createTopSheet(classicUsage)
@@ -1754,7 +1808,8 @@ if __name__ == "__main__":
     parser.add_argument('--oldFormat', default=False, action=argparse.BooleanOptionalAction, help="Break out detail by 'D codes' consistent with CFTS Sprint process used for multiple work numbers.")
     parser.add_argument('--storage', default=False, action=argparse.BooleanOptionalAction, help="Include File, BLock and Classic Cloud Object Storage detail analysis.")
     parser.add_argument('--detail', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write detail tabs to worksheet.")
-    parser.add_argument('--users', default=True, action=argparse.BooleanOptionalAction, help="Include user detai.")
+    parser.add_argument('--users', default=False, action=argparse.BooleanOptionalAction, help="Include user detail.")
+    parser.add_argument('--accountdetail', default=False, action=argparse.BooleanOptionalAction, help="Include account detail.")
     parser.add_argument('--summary', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write summary tabs to worksheet.")
     parser.add_argument('--reconciliation', default=True, action=argparse.BooleanOptionalAction, help="Whether to write invoice reconciliation tabs to worksheet.")
     parser.add_argument('--serverdetail', default=False, action=argparse.BooleanOptionalAction, help="Whether to write server detail tabs to worksheet.")
@@ -1780,6 +1835,7 @@ if __name__ == "__main__":
     cosdetailFlag =args.cosdetail
     bssFlag = args.bss
     userFlag = args.users
+    accountFlag = args.accountdetail
 
     if args.startdate == None or args.enddate == None:
         months = int(args.months)
@@ -1844,8 +1900,12 @@ if __name__ == "__main__":
         """
         Retrieve Existing Account Users and Network Storage if requested by flag
         """
+        if accountFlag:
+            accountDetail = getAccountDetail()
+
         if userFlag:
             userList = getUsers()
+
         if storageFlag:
             networkStorageDF = getAccountNetworkStorage()
 
