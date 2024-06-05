@@ -1841,14 +1841,14 @@ def bulkReport():
         worksheet.autofilter(0,0,totalrows,totalcols)
         return
 
-    accountList = json.loads(os.getenv("accountList", "[]"))
-
+    global client
     ims_username = args.username
     ims_password = args.password
     ims_yubikey = input("Yubi Key:")
     SL_ENDPOINT = "http://internal.applb.softlayer.local/v3.1/internal/xmlrpc"
     accountList = json.loads(os.getenv("accountList", "[]"))
     client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
+
     masterAccountList = pd.DataFrame()
     masterUserList = pd.DataFrame()
 
