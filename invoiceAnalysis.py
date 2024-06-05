@@ -1841,7 +1841,7 @@ def bulkReport():
         worksheet.autofilter(0,0,totalrows,totalcols)
         return
 
-    global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT
+    global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT, ims_account, accountFlag, userFlag, storageFlag
     ims_username = args.username
     ims_password = args.password
     ims_yubikey = input("Yubi Key:")
