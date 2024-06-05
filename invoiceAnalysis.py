@@ -131,12 +131,16 @@ def getUsers():
     except SoftLayer.SoftLayerAPIError as e:
         logging.error("Account::getUsers: %s, %s" % (e.faultCode, e.faultString))
         quit(1)
-
+    print (userList)
     data = []
     for user in userList:
+        if 'companyName' in user:
+            companyName = user['companyName']
+        else:
+            companyName = ""
         row = {
             'accountId': user['accountId'],
-            'companyName': user['companyName'],
+            'companyName': companyName,
             'id': user['id'],
             'displayName': user['displayName'],
             'fistName': user['firstName'],
