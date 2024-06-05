@@ -124,7 +124,7 @@ def getUsers():
     retreive active users
     :return:
     """
-    logging.info("Getting account users.")
+    logging.info("Getting IMS account users.")
     try:
         userList = client['Account'].getUsers(id=ims_account, mask='id,createDate, displayName, firstName, lastName, email, iamId, isMasterUserFlag, managedByOpenIdConnectFlag, modifyDate,'
                                                                    ' openIdConnectUserName, sslVpnAllowedFlag, statusDate, username, userStatus, loginAttempts')
@@ -1779,6 +1779,62 @@ def getBSS():
         createChargesbyVolume(storage, i)
     return
 
+def bulkReport():
+    """
+    --bulk to generate Bulk Reports for multiple accounts
+    requires IMS access and authority to accounts
+    must specify -u, -p, and provide yubi key
+
+    :return:
+    """
+    accountList = json.loads(os.getenv("accountList", "[]"))
+
+    ims_username = args.username
+    ims_password = args.password
+    ims_yubikey = input("Yubi Key:")
+    SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
+    accountList = json.loads(os.getenv("accountList", "[]"))
+    client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
+
+
+    for ims_account in accountList:
+        if accountFlag:
+            accountDetail = getAccountDetail()
+
+        if userFlag:
+            userList = getUsers()
+
+        if storageFlag:
+            networkStorageDF = getAccountNetworkStorage()
+
+            # Calculate invoice dates based on SLIC invoice cutoffs.
+        startdate, enddate = getInvoiceDates(startdate, enddate)
+
+        #  Retrieve Invoices from classic
+        classicUsage = getInvoiceDetail(startdate, enddate)
+
+        """"
+        Build Exel Report Report with Charges
+        """
+        output = args.output
+        split_tup = os.path.splitext(args.output)
+        """ remove file extension """
+        file_name = split_tup[0] + "_"+str(ims_account)+".xlsx"
+
+        createReport(file_name, classicUsage)
+
+        # upload created file to COS if COS credentials provided
+        if args.COS_APIKEY != None:
+            cos = ibm_boto3.resource("s3",
+                                     ibm_api_key_id=args.COS_APIKEY,
+                                     ibm_service_instance_id=args.COS_INSTANCE_CRN,
+                                     config=Config(signature_version="oauth"),
+                                     endpoint_url=args.COS_ENDPOINT
+                                     )
+            multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
+
+    return
+
 if __name__ == "__main__":
     setup_logging()
     load_dotenv()
@@ -1809,6 +1865,7 @@ if __name__ == "__main__":
     parser.add_argument('--storage', default=False, action=argparse.BooleanOptionalAction, help="Include File, BLock and Classic Cloud Object Storage detail analysis.")
     parser.add_argument('--detail', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write detail tabs to worksheet.")
     parser.add_argument('--users', default=False, action=argparse.BooleanOptionalAction, help="Include user detail.")
+    parser.add_argument("--bulk", default=False, action=argparse.BooleanOptionalAction, help="Bulk report using IMS credentials.")
     parser.add_argument('--accountdetail', default=False, action=argparse.BooleanOptionalAction, help="Include account detail.")
     parser.add_argument('--summary', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write summary tabs to worksheet.")
     parser.add_argument('--reconciliation', default=True, action=argparse.BooleanOptionalAction, help="Whether to write invoice reconciliation tabs to worksheet.")
@@ -1832,10 +1889,11 @@ if __name__ == "__main__":
     summaryFlag = args.summary
     reconciliationFlag = args.reconciliation
     serverDetailFlag = args.serverdetail
-    cosdetailFlag =args.cosdetail
+    cosdetailFlag = args.cosdetail
     bssFlag = args.bss
     userFlag = args.users
     accountFlag = args.accountdetail
+    bulkFlag = args.bulk
 
     if args.startdate == None or args.enddate == None:
         months = int(args.months)
@@ -1854,47 +1912,51 @@ if __name__ == "__main__":
         startdate = args.startdate
         enddate = args.enddate
 
+
     """
     If no APIKEY set, then check for internal IBM credentials
     NOTE: internal authentication requires internal SDK version & Global Protect VPN.
     """
     if args.load == True:
-        logging.info(
-            "Loading usage data from classicUsage.pkl file.")
+        logging.info( "Loading usage data from classicUsage.pkl file.")
         classicUsage = pd.read_pickle("classicUsage.pkl")
     else:
-        if args.IC_API_KEY == None:
-            if args.username == None or args.password == None or args.account == None:
-                logging.error("You must provide either IBM Cloud ApiKey or Internal Employee credentials & IMS account.")
-                quit(1)
-            else:
-                if args.username != None or args.password != None:
-                    logging.info("Using Internal endpoint and employee credentials.")
-                    ims_username = args.username
-                    ims_password = args.password
-                    if args.account == None:
-                        ims_account = input("IMS Account:")
-                    else:
-                        ims_account = args.account
-                    ims_yubikey = input("Yubi Key:")
-                    SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
-                    client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
-                else:
-                    logging.error("Error!  Can't find internal credentials or ims account.")
-                    quit(1)
+        if bulkFlag:
+            bulkReport()
+            quit()
         else:
-            logging.info("Using IBM Cloud Account API Key.")
-            IC_API_KEY = args.IC_API_KEY
-            ims_account = None
-
-            # Change endpoint to private Endpoint if command line open chosen
-            if args.SL_PRIVATE:
-                SL_ENDPOINT = "https://api.service.softlayer.com/xmlrpc/v3.1"
+            if args.IC_API_KEY == None:
+                if args.username == None or args.password == None or args.account == None:
+                    logging.error("You must provide either IBM Cloud ApiKey or Internal Employee credentials & IMS account.")
+                    quit(1)
+                else:
+                    if args.username != None or args.password != None:
+                        logging.info("Using Internal endpoint and employee credentials.")
+                        ims_username = args.username
+                        ims_password = args.password
+                        if args.account == None:
+                            ims_account = input("IMS Account:")
+                        else:
+                            ims_account = args.account
+                        ims_yubikey = input("Yubi Key:")
+                        SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
+                        client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
+                    else:
+                        logging.error("Error!  Can't find internal credentials or ims account.")
+                        quit(1)
             else:
-                SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
+                logging.info("Using IBM Cloud Account API Key.")
+                IC_API_KEY = args.IC_API_KEY
+                ims_account = None
 
-            # Create Classic infra API client
-            client = SoftLayer.Client(username="apikey", api_key=IC_API_KEY, endpoint_url=SL_ENDPOINT)
+                # Change endpoint to private Endpoint if command line open chosen
+                if args.SL_PRIVATE:
+                    SL_ENDPOINT = "https://api.service.softlayer.com/xmlrpc/v3.1"
+                else:
+                    SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
+
+                # Create Classic infra API client
+                client = SoftLayer.Client(username="apikey", api_key=IC_API_KEY, endpoint_url=SL_ENDPOINT)
 
 
         """
