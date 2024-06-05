@@ -1841,7 +1841,7 @@ def bulkReport():
         worksheet.autofilter(0,0,totalrows,totalcols)
         return
 
-    global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT, ims_account, accountFlag, userFlag, storageFlag, startdate, enddate, args
+    global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT, ims_account, accountFlag, userFlag, storageFlag, startdate, enddate, args, accountDetail, classicUsage, userList
     ims_username = args.username
     ims_password = args.password
     ims_yubikey = input("Yubi Key:")
@@ -1879,6 +1879,7 @@ def bulkReport():
         file_name = split_tup[0] + "_"+str(ims_account)+".xlsx"
 
         createReport(file_name, classicUsage)
+        writer.close()
 
         # upload created file to COS if COS credentials provided
         if args.COS_APIKEY != None:
