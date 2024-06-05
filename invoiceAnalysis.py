@@ -156,7 +156,10 @@ def getUsers():
         if len(user['loginAttempts']) > 0:
             row['lastLoginAttempt'] = user['loginAttempts'][0]['createDate']
             row['lastLoginAttemptIpAddress'] = user['loginAttempts'][0]['ipAddress']
-            row['lastLoginAttemptSuccessFlag'] = user['loginAttempts'][0]['successFlag']
+            if 'successFlag' in user['loginAttempts'][0]:
+                row['lastLoginAttemptSuccessFlag'] = user['loginAttempts'][0]['successFlag']
+            else:
+                row['lastLoginAttemptSuccessFlag'] = ""
 
         data.append(row.copy())
 
