@@ -144,6 +144,11 @@ def getUsers():
         else:
             email = ""
 
+        if 'sslVpnAllowedFlag' in user:
+            sslVpnAllowedFlag = user['sslVpnAllowedFlag']
+        else:
+            sslVpnAllowedFlag = ""
+
         row = {
             'accountId': user['accountId'],
             'companyName': companyName,
@@ -160,7 +165,7 @@ def getUsers():
             'userStatus': user['userStatus']['name'],
             'isMasterUserFlag': user['isMasterUserFlag'],
             'managedByOpenConnectFlag': user['managedByOpenIdConnectFlag'],
-            'sslVpnAllowedFlag': user['sslVpnAllowedFlag']
+            'sslVpnAllowedFlag': sslVpnAllowedFlag
         }
 
         if len(user['loginAttempts']) > 0:
