@@ -100,6 +100,28 @@ def getAccountDetail():
         logging.error("Account::getObject: %s, %s" % (e.faultCode, e.faultString))
         quit(1)
 
+    if 'email' in account['masterUser']:
+        masteremail = account['masterUser']['email']
+    else:
+        masteremail = ""
+
+    if 'iamId' in account['masterUser']:
+        masteriamId = account['masterUser']['iamId']
+    else:
+        masteriamId = ""
+
+    if 'internalNotes' in account:
+        notes = []
+        for note in account['internalNotes']:
+            row = {
+                "createDate": note['createDate'],
+                "note": note['note'],
+            }
+            notes.append(row.copy())
+    else:
+        notes = "[]"
+
+
     row = {
         'id': account['id'],
         'companyName': account['companyName'],
@@ -109,9 +131,9 @@ def getAccountDetail():
         'billingInfoCreateDate': account['billingInfo']["createDate"],
         'billingInfoCurrency': account['billingInfo']["currency"]['name'],
         'brand': account['brand']["name"],
-        'internalNotes': account['internalNotes'],
-        'masterUserEmail': account['masterUser']['email'],
-        'masterUserIamId': account['masterUser']['iamId']
+        'internalNotes': notes,
+        'masterUserEmail': masteremail,
+        'masterUserIamId': masteriamId
     }
 
     """ create dataframe of account detail """
