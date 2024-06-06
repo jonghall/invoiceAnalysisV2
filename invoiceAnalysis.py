@@ -100,15 +100,15 @@ def getAccountDetail():
         logging.error("Account::getObject: %s, %s" % (e.faultCode, e.faultString))
         quit(1)
 
-    if 'email' in account['masterUser']:
-        masteremail = account['masterUser']['email']
-    else:
-        masteremail = ""
+    masteremail = ""
+    masteriamId = ""
+    if 'masterUser' in account:
+        if 'email' in account['masterUser']:
+            masteremail = account['masterUser']['email']
 
-    if 'iamId' in account['masterUser']:
-        masteriamId = account['masterUser']['iamId']
-    else:
-        masteriamId = ""
+        if 'iamId' in account['masterUser']:
+            masteriamId = account['masterUser']['iamId']
+
 
     if 'internalNotes' in account:
         notes = []
