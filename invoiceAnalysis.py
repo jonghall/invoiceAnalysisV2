@@ -91,7 +91,7 @@ def getAccountDetail():
     retreive active users
     :return:
     """
-    logging.info("Getting IMS Account Detail.")
+    logging.info("Getting IMS Account {} Detail.".format(ims_account))
     try:
         account = client['Account'].getObject(id=ims_account, mask="id, companyName, country, email, accountLinks, accountStatus, activeAgreements, activeNotificationSubscribers,accountContacts, billingInfo,"
                                                                          "bluemixAccountId, brand, inProgressExternalAccountSetup, datacentersWithSubnetAllocations,  attributes, bluemixAccountLink, internalNotes,"
@@ -146,7 +146,7 @@ def getUsers():
     retreive active users
     :return:
     """
-    logging.info("Getting IMS account users.")
+    logging.info("Getting IMS account {} users.".format(ims_account))
     try:
         userList = client['Account'].getUsers(id=ims_account, mask='id,accountId, companyName, createDate, displayName, firstName, lastName, email, iamId, isMasterUserFlag, managedByOpenIdConnectFlag, modifyDate,'
                                                                    ' openIdConnectUserName, sslVpnAllowedFlag, statusDate, username, userStatus, loginAttempts')
@@ -1865,7 +1865,7 @@ def bulkReport():
         return
 
     global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT, ims_account, accountFlag, userFlag, storageFlag,\
-        startdate, enddate, accountDetail, classicUsage, userList
+        accountDetail, classicUsage, userList
     ims_username = args.username
     ims_password = args.password
     ims_yubikey = input("Yubi Key:")
@@ -1877,6 +1877,7 @@ def bulkReport():
     masterUserList = pd.DataFrame()
 
     for ims_account in accountList:
+        logging.info("Bulk mode: retrieving data from IMS Account {} between {} and {}.".format(ims_account, startdate, enddate))
         if accountFlag:
             accountDetail = getAccountDetail()
             masterAccountList = pd.concat([masterAccountList, accountDetail], ignore_index=True)
@@ -1887,9 +1888,6 @@ def bulkReport():
 
         if storageFlag:
             networkStorageDF = getAccountNetworkStorage()
-
-            # Calculate invoice dates based on SLIC invoice cutoffs.
-        startdate, enddate = getInvoiceDates(startdate, enddate)
 
         #  Retrieve Invoices from classic
         classicUsage = getInvoiceDetail(startdate, enddate)
@@ -2021,6 +2019,7 @@ if __name__ == "__main__":
         classicUsage = pd.read_pickle("classicUsage.pkl")
     else:
         if bulkFlag:
+            startdate, enddate = getInvoiceDates(startdate, enddate)
             bulkReport()
             quit()
         else:
