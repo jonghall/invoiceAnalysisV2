@@ -1080,6 +1080,7 @@ def createReport(filename, classicUsage):
         getBSS()
 
     writer.close()
+    return
 
 def multi_part_upload(bucket_name, item_name, file_path):
     try:
@@ -1841,7 +1842,8 @@ def bulkReport():
         worksheet.autofilter(0,0,totalrows,totalcols)
         return
 
-    global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT, ims_account, accountFlag, userFlag, storageFlag, startdate, enddate, args, accountDetail, classicUsage, userList
+    global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT, ims_account, accountFlag, userFlag, storageFlag,\
+        startdate, enddate, accountDetail, classicUsage, userList
     ims_username = args.username
     ims_password = args.password
     ims_yubikey = input("Yubi Key:")
@@ -1873,13 +1875,11 @@ def bulkReport():
         """"
         Build Exel Report Report with Charges
         """
-        output = args.output
         split_tup = os.path.splitext(args.output)
-        """ remove file extension """
+        """ add account # to filename """
         file_name = split_tup[0] + "_"+str(ims_account)+".xlsx"
 
         createReport(file_name, classicUsage)
-        writer.close()
 
         # upload created file to COS if COS credentials provided
         if args.COS_APIKEY != None:
@@ -1891,23 +1891,24 @@ def bulkReport():
                                      )
             multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
 
-        """ Create Master File of Account Info and Users for bulk list """
-        split_tup = os.path.splitext(args.output)
-        """ remove file extension """
-        file_name = split_tup[0] + "_master.xlsx"
-        writer = pd.ExcelWriter(file_name, engine='xlsxwriter')
-        workbook = writer.book
-        createMasterAccountDetailTab(masterAccountList)
-        createMaterUserTab(masterUserList)
+    """ Create Master File of Account Info and Users for bulk list """
+    split_tup = os.path.splitext(args.output)
+    """ remove file extension and add _master to filename """
+    file_name = split_tup[0] + "_master.xlsx"
+    writer = pd.ExcelWriter(file_name, engine='xlsxwriter')
+    workbook = writer.book
+    createMasterAccountDetailTab(masterAccountList)
+    createMaterUserTab(masterUserList)
+    writer.close()
 
-        if args.COS_APIKEY != None:
-            cos = ibm_boto3.resource("s3",
-                                     ibm_api_key_id=args.COS_APIKEY,
-                                     ibm_service_instance_id=args.COS_INSTANCE_CRN,
-                                     config=Config(signature_version="oauth"),
-                                     endpoint_url=args.COS_ENDPOINT
-                                     )
-            multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
+    if args.COS_APIKEY != None:
+        cos = ibm_boto3.resource("s3",
+                                 ibm_api_key_id=args.COS_APIKEY,
+                                 ibm_service_instance_id=args.COS_INSTANCE_CRN,
+                                 config=Config(signature_version="oauth"),
+                                 endpoint_url=args.COS_ENDPOINT
+                                 )
+        multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
 
     return
 
