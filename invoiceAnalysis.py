@@ -95,11 +95,12 @@ def getAccountDetail():
     try:
         account = client['Account'].getObject(id=ims_account, mask="id, companyName, country, email, accountLinks, accountStatus, activeAgreements, activeNotificationSubscribers,accountContacts, billingInfo,"
                                                                          "bluemixAccountId, brand, inProgressExternalAccountSetup, datacentersWithSubnetAllocations,  attributes, bluemixAccountLink, internalNotes,"
-                                                                         "masterUser")
+                                                                         "masterUser, proofOfConceptAccountFlag")
     except SoftLayer.SoftLayerAPIError as e:
         logging.error("Account::getObject: %s, %s" % (e.faultCode, e.faultString))
         quit(1)
 
+    print (account)
     masteremail = ""
     masteriamId = ""
     if 'masterUser' in account:
