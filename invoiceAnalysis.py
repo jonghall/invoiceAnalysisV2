@@ -1830,8 +1830,9 @@ def bulkReport():
         """
         Write account to excel
         """
-        logging.info("Creating account tab.")
+        logging.info("Creating Master Account tab.")
         accountDetail.to_excel(writer, sheet_name='AccountDetail')
+        format1 = workbook.add_format({'num_format': '$#,##0.00'})
         format2 = workbook.add_format({'align': 'left'})
         worksheet = writer.sheets['AccountDetail']
         worksheet.set_column('A:A', 5, format2)
@@ -1839,13 +1840,15 @@ def bulkReport():
         worksheet.set_column('C:C', 40, format2)
         worksheet.set_column('D:D', 30, format2)
         worksheet.set_column('E:E', 30, format2)
-        worksheet.set_column('F:F', 15, format2)
-        worksheet.set_column('G:I', 25, format2)
-        worksheet.set_column('J:J', 40, format2)
-        worksheet.set_column('K:K', 30, format2)
-        worksheet.set_column('L:L', 18, format2)
-        #totalrows,totalcols=accountDetail.shape
-        #worksheet.autofilter(0,0,totalrows,totalcols)
+        worksheet.set_column('F:F', 25, format2)
+        worksheet.set_column('G:G', 15, format2)
+        worksheet.set_column('H:J', 25, format2)
+        worksheet.set_column('K:L', 40, format2)
+        worksheet.set_column('L:L', 30, format2)
+        worksheet.set_column('M:M', 18, format2)
+        worksheet.set_column('N:ZZ', 18, format1)
+        totalrows,totalcols=accountDetail.shape
+        worksheet.autofilter(0,0,totalrows,totalcols)
         return
     def createMaterUserTab(userList):
         """
