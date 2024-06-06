@@ -93,14 +93,11 @@ def getAccountDetail():
     """
     logging.info("Getting IMS Account {} Detail.".format(ims_account))
     try:
-        account = client['Account'].getObject(id=ims_account, mask="id, companyName, country, email, accountLinks, accountStatus, activeAgreements, activeNotificationSubscribers,accountContacts, billingInfo,"
-                                                                         "bluemixAccountId, brand, inProgressExternalAccountSetup, datacentersWithSubnetAllocations,  attributes, bluemixAccountLink, internalNotes,"
-                                                                         "masterUser, proofOfConceptAccountFlag")
+        account = client['Account'].getObject(id=ims_account, mask="id, companyName, country, email, accountStatus, billingInfo, bluemixAccountId, brand, datacentersWithSubnetAllocations, bluemixAccountLink, internalNotes,masterUser, proofOfConceptAccountFlag")
     except SoftLayer.SoftLayerAPIError as e:
         logging.error("Account::getObject: %s, %s" % (e.faultCode, e.faultString))
         quit(1)
 
-    print (account)
     masteremail = ""
     masteriamId = ""
     if 'masterUser' in account:
@@ -128,6 +125,7 @@ def getAccountDetail():
         'companyName': account['companyName'],
         'email': account['email'],
         'bluemixAccountId': account['bluemixAccountId'],
+        'proofOfConceptAccountFlag': account['proofOfConceptAccountFlag'],
         'accountStatus': account['accountStatus']['name'],
         'billingInfoCreateDate': account['billingInfo']["createDate"],
         'billingInfoCurrency': account['billingInfo']["currency"]['name'],
