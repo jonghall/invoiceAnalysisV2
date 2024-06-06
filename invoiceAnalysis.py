@@ -15,7 +15,7 @@
 
 
 __author__ = 'jonhall'
-import SoftLayer, os, logging, logging.config, json, calendar, os.path, argparse, base64, re, urllib, yaml
+import SoftLayer, os, logging, logging.config, json, calendar, os.path, argparse, base64, re, urllib, yaml, strip_markdown
 import pandas as pd
 import numpy as np
 from sendgrid import SendGridAPIClient
@@ -109,15 +109,11 @@ def getAccountDetail():
 
 
     if 'internalNotes' in account:
-        notes = []
+        notes = ""
         for note in account['internalNotes']:
-            row = {
-                "createDate": note['createDate'],
-                "note": note['note'],
-            }
-            notes.append(row.copy())
+            notes = notes + strip_markdown.strip_markdown(note['note'])
     else:
-        notes = "[]"
+        notes = ""
 
 
     row = {
@@ -756,11 +752,12 @@ def createReport(filename, classicUsage):
         worksheet.set_column('C:C', 40, format2)
         worksheet.set_column('D:D', 30, format2)
         worksheet.set_column('E:E', 30, format2)
-        worksheet.set_column('F:F', 15, format2)
-        worksheet.set_column('G:I', 25, format2)
-        worksheet.set_column('J:J', 40, format2)
-        worksheet.set_column('K:K', 30, format2)
-        worksheet.set_column('L:L', 18, format2)
+        worksheet.set_column('F:F', 25, format2)
+        worksheet.set_column('G:G', 15, format2)
+        worksheet.set_column('H:J', 25, format2)
+        worksheet.set_column('K:L', 40, format2)
+        worksheet.set_column('L:L', 30, format2)
+        worksheet.set_column('M:M', 18, format2)
         #totalrows,totalcols=accountDetail.shape
         #worksheet.autofilter(0,0,totalrows,totalcols)
         return
@@ -1877,19 +1874,16 @@ def bulkReport():
 
     for ims_account in accountList:
         logging.info("Bulk mode: retrieving data from IMS Account {} between {} and {}.".format(ims_account, startdate, enddate))
-        if accountFlag:
-            accountDetail = getAccountDetail()
-            masterAccountList = pd.concat([masterAccountList, accountDetail], ignore_index=True)
+        accountDetail = getAccountDetail()
+        userList = getUsers()
 
-        if userFlag:
-            userList = getUsers()
-            masterUserList = pd.concat([masterUserList, userList], ignore_index=True)
 
         if storageFlag:
             networkStorageDF = getAccountNetworkStorage()
 
         #  Retrieve Invoices from classic
         classicUsage = getInvoiceDetail(startdate, enddate)
+
 
         """"
         Build Exel Report Report with Charges
@@ -1909,6 +1903,14 @@ def bulkReport():
                                      endpoint_url=args.COS_ENDPOINT
                                      )
             multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
+
+        """ Create Summary data for master file"""
+        months = classicUsage["IBM_Invoice_Month"].unique()
+        for month in months:
+            """calculate each months total Recurring charge"""
+            accountDetail[month] = classicUsage[(classicUsage["IBM_Invoice_Month"] == month)]["totalRecurringCharge"].sum()
+        masterAccountList = pd.concat([masterAccountList, accountDetail], ignore_index=True)
+        masterUserList = pd.concat([masterUserList, userList], ignore_index=True)
 
     """ Create Master File of Account Info and Users for bulk list """
     split_tup = os.path.splitext(args.output)
@@ -2074,7 +2076,6 @@ if __name__ == "__main__":
 
         #  Retrieve Invoices from classic
         classicUsage = getInvoiceDetail(startdate, enddate)
-
 
     """"
     Build Exel Report Report with Charges
