@@ -1880,7 +1880,6 @@ def bulkReport():
         accountDetail = getAccountDetail()
         userList = getUsers()
 
-
         if storageFlag:
             networkStorageDF = getAccountNetworkStorage()
 
@@ -1912,6 +1911,8 @@ def bulkReport():
         for month in months:
             """calculate each months total Recurring charge"""
             accountDetail[month] = classicUsage[(classicUsage["IBM_Invoice_Month"] == month)]["totalRecurringCharge"].sum()
+
+        """ Add account detail and users to master table """
         masterAccountList = pd.concat([masterAccountList, accountDetail], ignore_index=True)
         masterUserList = pd.concat([masterUserList, userList], ignore_index=True)
 
