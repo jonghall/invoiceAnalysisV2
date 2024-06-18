@@ -72,37 +72,37 @@ RECURRING invoice each month as a line item, but are for usage two months prior.
 python invoiceAnalysis.py --help
 usage: invoiceAnalysis.py [-h] [-k IC_API_KEY] [-u username] [-p password] [-a account] [-s STARTDATE] [-e ENDDATE] [--debug | --no-debug] [--load | --no-load] [--save | --no-save] [--months MONTHS] [--COS_APIKEY COS_APIKEY] [--COS_ENDPOINT COS_ENDPOINT] [--COS_INSTANCE_CRN COS_INSTANCE_CRN]
                           [--COS_BUCKET COS_BUCKET] [--sendGridApi SENDGRIDAPI] [--sendGridTo SENDGRIDTO] [--sendGridFrom SENDGRIDFROM] [--sendGridSubject SENDGRIDSUBJECT] [--output OUTPUT] [--SL_PRIVATE | --no-SL_PRIVATE] [--oldFormat | --no-oldFormat] [--storage | --no-storage]
-                          [--detail | --no-detail] [--summary | --no-summary] [--reconciliation | --no-reconciliation] [--serverdetail | --no-serverdetail] [--cosdetail | --no-cosdetail] [--bss | --no-bss] [--users | --no-users]
+                          [--detail | --no-detail] [--summary | --no-summary] [--reconciliation | --no-reconciliation] [--serverdetail | --no-serverdetail] [--classiccos | --no-classiccos] [--bss | --no-bss] [--users | --no-users]
 ```
 
 ### Command Line Parameters
-| Parameter                   | Environment Variable | Default               | Description                   
-|-----------------------------|----------------------|-----------------------|-------------------------------
-| --IC_API_KEY, -k            | IC_API_KEY           | None                  | IBM Cloud API Key to be used to retrieve invoices and usage. 
-| --username                  | ims_username         | None                  | Required only if using internal authorization (used instead of IC_API_KEY) 
-| --password                  | ims_password         | None                  | Required only if using internal authorization (used instead of IC_API_KEY) 
-| --account                   | ims_account          | None                  | Required only if using internal authorization to specify IMS account to pull. 
-| --STARTDATE, -s             | startdate            | None                  | Start Month in YYYY-MM format 
-| --ENDDATE, -e               | enddate              | None                  | End Month in YYYY-MM format   
-| --months                    | months               | 1                     | Number of months including last full month to include in report. (use instead of -s/-e) 
-| --COS_APIKEY                | COS_APIKEY           | None                  | COS API to be used to write output file to object storage, if not specified file written locally. 
-| --COS_BUCKET                | COS_BUCKET           | None                  | COS Bucket to be used to write output file to. 
-| --COS_ENDPOINT              | COS_ENDPOINT         | None                  | COS Endpoint (with https://) to be used to write output file to. 
-| --COS_INSTANCE_CRN          | COS_INSTANCE_CRN     | None                  | COS Instance CRN to be used to write output file to. 
-| --sendGridApi               | sendGridApi          | None                  | SendGrid API key to use to send Email. 
-| --sendGridTo                | sendGridTo           | None                  | SendGrid comma delimited list of email addresses to send output report to. 
-| --sendGridFrom              | sendGridFrom         | None                  | SendGrid from email addresss to send output report from. 
-| --sendGridSubject           | sendGridSubject      | None                  | SendGrid email subject.       
-| --output                    | output               | invoice-analysis.xlsx | Output file name used.        
-| --SL_PRIVATE                |                      | --no_SL_PRIVATE       | Whether to use Public or Private Endpoint.
-| --storage                   |                      | --no_storage          | Whether to write additional level of classic Block & File storage analysis to worksheet (default: False) 
-| --no-summary                |                      | --summary             | Whether to write summary detail tabs to worksheet. (default: True)
-| --no-detail                 |                      | --detail              | Whether to Write detail tabs to worksheet. (default: True)
-| --no-reconciliation         |                      | --reconciliation      | Whether to write invoice reconciliation tabs to worksheet. (default: True)
-| --no-serverdetail           |                      | --serverdetail        | Whether to write server detail tabs to worksheet (default: True)
-| --cosdetail                 |                      | --no-cosdetail        | Whether to write Classic OBject Storage tab to worksheet (default: False)
-| --bss                       |                      | --no-bss              | Include IBM Cloud BSS Metered Service detail tabs
-| --users                     |                      | --users               | Include List of Account Users (default: False) apikey must have viewer access to users
+| Parameter           | Environment Variable | Default               | Description                   
+|---------------------|----------------------|-----------------------|-------------------------------
+| --IC_API_KEY, -k    | IC_API_KEY           | None                  | IBM Cloud API Key to be used to retrieve invoices and usage. 
+| --username          | ims_username         | None                  | Required only if using internal authorization (used instead of IC_API_KEY) 
+| --password          | ims_password         | None                  | Required only if using internal authorization (used instead of IC_API_KEY) 
+| --account           | ims_account          | None                  | Required only if using internal authorization to specify IMS account to pull. 
+| --STARTDATE, -s     | startdate            | None                  | Start Month in YYYY-MM format 
+| --ENDDATE, -e       | enddate              | None                  | End Month in YYYY-MM format   
+| --months            | months               | 1                     | Number of months including last full month to include in report. (use instead of -s/-e) 
+| --COS_APIKEY        | COS_APIKEY           | None                  | COS API to be used to write output file to object storage, if not specified file written locally. 
+| --COS_BUCKET        | COS_BUCKET           | None                  | COS Bucket to be used to write output file to. 
+| --COS_ENDPOINT      | COS_ENDPOINT         | None                  | COS Endpoint (with https://) to be used to write output file to. 
+| --COS_INSTANCE_CRN  | COS_INSTANCE_CRN     | None                  | COS Instance CRN to be used to write output file to. 
+| --sendGridApi       | sendGridApi          | None                  | SendGrid API key to use to send Email. 
+| --sendGridTo        | sendGridTo           | None                  | SendGrid comma delimited list of email addresses to send output report to. 
+| --sendGridFrom      | sendGridFrom         | None                  | SendGrid from email addresss to send output report from. 
+| --sendGridSubject   | sendGridSubject      | None                  | SendGrid email subject.       
+| --output            | output               | invoice-analysis.xlsx | Output file name used.        
+| --SL_PRIVATE        |                      | --no_SL_PRIVATE       | Whether to use Public or Private Endpoint.
+| --storage           |                      | --no_storage          | Whether to write additional level of classic Block & File storage analysis to worksheet (default: False) 
+| --no-summary        |                      | --summary             | Whether to write summary detail tabs to worksheet. (default: True)
+| --no-detail         |                      | --detail              | Whether to Write detail tabs to worksheet. (default: True)
+| --no-reconciliation |                      | --reconciliation      | Whether to write invoice reconciliation tabs to worksheet. (default: True)
+| --no-serverdetail   |                      | --serverdetail        | Whether to write server detail tabs to worksheet (default: True)
+| --classiccos        |                      | --no-classiccos       | Whether to write Classic OBject Storage tab to worksheet (default: False)
+| --bss               |                      | --no-bss              | Include IBM Cloud BSS Metered Service detail tabs
+| --users             |                      | --users               | Include List of Account Users (default: False) apikey must have viewer access to users
 
 ### Examples
 

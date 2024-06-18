@@ -784,7 +784,7 @@ def createReport(filename, classicUsage):
             invoiceSummary = pd.pivot_table(parentRecords, index=["Type","dPart", "Category_Group", "Category"],
                                             values=["totalAmount"],
                                             columns=['IBM_Invoice_Month'],
-                                            aggfunc={'totalAmount': np.sum,}, margins=True, margins_name="Total", fill_value=0).\
+                                            aggfunc={'totalAmount': "sum",}, margins=True, margins_name="Total", fill_value=0).\
                                             rename(columns={'totalRecurringCharge': 'TotalRecurring'})
             invoiceSummary.to_excel(writer, sheet_name='CategoryGroupSummary')
             worksheet = writer.sheets['CategoryGroupSummary']
@@ -808,7 +808,7 @@ def createReport(filename, classicUsage):
             categorySummary = pd.pivot_table(parentRecords, index=["Type", "Category_Group", "Category", "Description"],
                                              values=["totalAmount"],
                                              columns=['IBM_Invoice_Month'],
-                                             aggfunc={'totalAmount': np.sum}, margins=True, margins_name="Total", fill_value=0)
+                                             aggfunc={'totalAmount': "sum"}, margins=True, margins_name="Total", fill_value=0)
             categorySummary.to_excel(writer, sheet_name='CategoryDetail')
             worksheet = writer.sheets['CategoryDetail']
             format1 = workbook.add_format({'num_format': '$#,##0.00'})
@@ -829,7 +829,7 @@ def createReport(filename, classicUsage):
                 iaascosSummary = pd.pivot_table(iaascosRecords, index=["Type", "Category_Group", "childParentProduct", "Category", "Description"],
                                                  values=["childTotalRecurringCharge"],
                                                  columns=['IBM_Invoice_Month'],
-                                                 aggfunc={'childTotalRecurringCharge': np.sum}, fill_value=0, margins=True, margins_name="Total")
+                                                 aggfunc={'childTotalRecurringCharge': "sum"}, fill_value=0, margins=True, margins_name="Total")
                 iaascosSummary.to_excel(writer, sheet_name='Classic_COS_Detail')
                 worksheet = writer.sheets['Classic_COS_Detail']
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
@@ -891,7 +891,7 @@ def createReport(filename, classicUsage):
 
                 iaasInvoice = pd.pivot_table(combined, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date", "Service_Date_Start", "Service_Date_End", "dPart", "lineItemCategory"],
                                               values=["totalAmount"],
-                                              aggfunc=np.sum, margins=True,
+                                              aggfunc=sum, margins=True,
                                               margins_name="Total", fill_value=0)
 
                 iaasInvoice.to_excel(writer, sheet_name='TopSheet_{}'.format(i),startcol=0, startrow=1)
@@ -924,7 +924,7 @@ def createReport(filename, classicUsage):
                     startrow = len(iaasInvoice.index) + 5
                     paasSummary = pd.pivot_table(paasRecords, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date","Service_Date_Start", "Service_Date_End","dPart", "lineItemCategory"],
                                                     values=["totalAmount"],
-                                                    aggfunc=np.sum, margins=True,
+                                                    aggfunc=sum, margins=True,
                                                     fill_value=0)
                     paasSummary.to_excel(writer, 'TopSheet_{}'.format(i),startcol=0, startrow=startrow)
                     worksheet.write(startrow-1,0, "Platform as a Service Charges appearing in {}".format(i), boldtext)
@@ -942,7 +942,7 @@ def createReport(filename, classicUsage):
                     creditItems["lineItemCategory"] = creditItems["Category"]
                     pivot = pd.pivot_table(creditItems, index=["Portal_Invoice_Number", "Type", "Portal_Invoice_Date","Service_Date_Start", "Service_Date_End","dPart", "lineItemCategory"],
                                            values=["totalAmount"],
-                                           aggfunc=np.sum, margins=True, margins_name="Total",
+                                           aggfunc=sum, margins=True, margins_name="Total",
                                            fill_value=0)
                     pivot.to_excel(writer, sheet_name='TopSheet_{}'.format(i),startcol=0, startrow=startrow)
                     worksheet.write(startrow - 1, 0, "Credit detail appearing in {}".format(i), boldtext)
@@ -965,7 +965,7 @@ def createReport(filename, classicUsage):
                                 index=["location", "Category", "billing_notes", "storage_notes", "Description"],
                                 values=["totalRecurringCharge"],
                                 columns=['IBM_Invoice_Month'],
-                                aggfunc={'totalRecurringCharge': np.sum}, fill_value=0).rename(
+                                aggfunc={'totalRecurringCharge': "sum"}, fill_value=0).rename(
                 columns={'totalRecurringCharge': 'TotalRecurring'})
 
             """
@@ -989,8 +989,8 @@ def createReport(filename, classicUsage):
             virtualServerPivot = pd.pivot_table(virtualServers, index=["Description", "OS"],
                                                 values=["Hours", "totalRecurringCharge"],
                                                 columns=['IBM_Invoice_Month'],
-                                                aggfunc={'Description': len, 'Hours': np.sum,
-                                                         'totalRecurringCharge': np.sum}, fill_value=0). \
+                                                aggfunc={'Description': len, 'Hours': "sum",
+                                                         'totalRecurringCharge': "sum"}, fill_value=0). \
                 rename(columns={"Description": 'qty', 'Hours': 'Total Hours', 'totalRecurringCharge': 'TotalRecurring'})
 
             virtualServerPivot.to_excel(writer, sheet_name='HrlyVirtualServers')
@@ -1010,7 +1010,7 @@ def createReport(filename, classicUsage):
             virtualServerPivot = pd.pivot_table(monthlyVirtualServers, index=["Description", "OS"],
                                                 values=["totalRecurringCharge"],
                                                 columns=['IBM_Invoice_Month'],
-                                                aggfunc={'Description': len, 'totalRecurringCharge': np.sum},
+                                                aggfunc={'Description': len, 'totalRecurringCharge': "sum"},
                                                 fill_value=0). \
                 rename(columns={"Description": 'qty', 'totalRecurringCharge': 'TotalRecurring'})
             virtualServerPivot.to_excel(writer, sheet_name='MnthlyVirtualServers')
@@ -1029,8 +1029,8 @@ def createReport(filename, classicUsage):
             pivot = pd.pivot_table(bareMetalServers, index=["Description", "OS"],
                                    values=["Hours", "totalRecurringCharge"],
                                    columns=['IBM_Invoice_Month'],
-                                   aggfunc={'Description': len, 'totalRecurringCharge': np.sum}, fill_value=0). \
-                rename(columns={"Description": 'qty', 'Hours': np.sum, 'totalRecurringCharge': 'TotalRecurring'})
+                                   aggfunc={'Description': len, 'totalRecurringCharge': "sum"}, fill_value=0). \
+                rename(columns={"Description": 'qty', 'Hours': "sum", 'totalRecurringCharge': 'TotalRecurring'})
             pivot.to_excel(writer, sheet_name='HrlyBaremetalServers')
             format_leftjustify = workbook.add_format()
             format_leftjustify.set_align('left')
@@ -1047,7 +1047,7 @@ def createReport(filename, classicUsage):
             pivot = pd.pivot_table(monthlyBareMetalServers, index=["location", "Description", "OS"],
                                    values=["totalRecurringCharge"],
                                    columns=['IBM_Invoice_Month'],
-                                   aggfunc={'Description': len, 'totalRecurringCharge': np.sum}, fill_value=0). \
+                                   aggfunc={'Description': len, 'totalRecurringCharge': "sum"}, fill_value=0). \
                 rename(columns={"Description": 'qty', 'totalRecurringCharge': 'TotalRecurring'})
             pivot.to_excel(writer, sheet_name='MthlyBaremetalServers')
             format_leftjustify = workbook.add_format()
@@ -1724,7 +1724,7 @@ def getBSS():
         vcpu = pd.pivot_table(servers, index=["region", "service_name", "instance_role", "instance_name", "instance_id",
                                               "instance_profile"],
                               values=["rated_cost", "cost"],
-                              aggfunc={"rated_cost": np.sum, "cost": np.sum},
+                              aggfunc={"rated_cost": "sum", "cost": "sum"},
                               margins=True, margins_name="Total",
                               fill_value=0)
 
@@ -1752,7 +1752,7 @@ def getBSS():
         volumes = volumes.query('metric == "GIGABYTE_HOURS" and month == @month')
         volumes = pd.pivot_table(volumes, index=["region", "service_name", "resource_group_name", "instance_name", "instance_id", "capacity", "iops"],
                                  values=["cost", "rated_cost"],
-                                 aggfunc={"cost": np.sum, "rated_cost": np.sum},
+                                 aggfunc={"cost": "sum", "rated_cost": "sum"},
                                  margins=True, margins_name="Total",
                                  fill_value=0)
 
@@ -1776,7 +1776,7 @@ def getBSS():
         usageSummary = pd.pivot_table(paasUsage, index=["resource_name"],
                                       columns=["month"],
                                       values=["rated_cost", "cost"],
-                                      aggfunc=np.sum, margins=True, margins_name="Total",
+                                      aggfunc="sum", margins=True, margins_name="Total",
                                       fill_value=0)
         new_order = ["rated_cost", "cost"]
         usageSummary = usageSummary.reindex(new_order, axis=1, level=0)
@@ -1853,7 +1853,7 @@ if __name__ == "__main__":
     parser.add_argument('--summary', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write summary tabs to worksheet.")
     parser.add_argument('--reconciliation', default=False, action=argparse.BooleanOptionalAction, help="Whether to write invoice reconciliation tabs to worksheet.")
     parser.add_argument('--serverdetail', default=False, action=argparse.BooleanOptionalAction, help="Whether to write server detail tabs to worksheet.")
-    parser.add_argument('--cosdetail', default=False, action=argparse.BooleanOptionalAction, help="Whether to write Classic Object Storage tab to worksheet.")
+    parser.add_argument('--classiccos', default=False, action=argparse.BooleanOptionalAction, help="Whether to write Classic Object Storage tab to worksheet.")
     parser.add_argument('--bss', default=False, action=argparse.BooleanOptionalAction, help="Retreive BSS usage for corresponding months using ibmCloudUsage.py.")
 
     args = parser.parse_args()
@@ -1871,7 +1871,7 @@ if __name__ == "__main__":
     summaryFlag = args.summary
     reconciliationFlag = args.reconciliation
     serverDetailFlag = args.serverdetail
-    cosdetailFlag = args.cosdetail
+    cosdetailFlag = args.classiccos
     bssFlag = args.bss
     userFlag = args.users
     accountFlag = args.accountdetail
