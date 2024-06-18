@@ -466,6 +466,12 @@ def getInvoiceDetail(startdate, enddate):
             # ITERATE THROUGH DETAIL
             for item in Billing_Invoice:
                 logging.debug(item)
+
+                if item["billingItemId"] == x:
+                    product = client['Product_Item_Category'].getBillingItems(id=item["category"]["id"], mask="id,account.id,account.accountSatusId,account.brandId,account.CompanyName, lastBIllDate,modifyDate,notes,recurringFee")
+                    print (product)
+                    quit()
+
                 totalOneTimeAmount = float(item['totalOneTimeAmount'])
                 billingItemId = item['billingItemId']
                 if "group" in item["category"]:
