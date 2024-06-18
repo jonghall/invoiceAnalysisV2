@@ -72,7 +72,7 @@ RECURRING invoice each month as a line item, but are for usage two months prior.
 python invoiceAnalysis.py --help
 usage: invoiceAnalysis.py [-h] [-k IC_API_KEY] [-u username] [-p password] [-a account] [-s STARTDATE] [-e ENDDATE] [--debug | --no-debug] [--load | --no-load] [--save | --no-save] [--months MONTHS] [--COS_APIKEY COS_APIKEY] [--COS_ENDPOINT COS_ENDPOINT] [--COS_INSTANCE_CRN COS_INSTANCE_CRN]
                           [--COS_BUCKET COS_BUCKET] [--sendGridApi SENDGRIDAPI] [--sendGridTo SENDGRIDTO] [--sendGridFrom SENDGRIDFROM] [--sendGridSubject SENDGRIDSUBJECT] [--output OUTPUT] [--SL_PRIVATE | --no-SL_PRIVATE] [--oldFormat | --no-oldFormat] [--storage | --no-storage]
-                          [--detail | --no-detail] [--summary | --no-summary] [--reconciliation | --no-reconciliation] [--serverdetail | --no-serverdetail] [--cosdetail | --no-cosdetail] [--bss | --no-bss]
+                          [--detail | --no-detail] [--summary | --no-summary] [--reconciliation | --no-reconciliation] [--serverdetail | --no-serverdetail] [--cosdetail | --no-cosdetail] [--bss | --no-bss] [--users | --no-users]
 ```
 
 ### Command Line Parameters
@@ -94,8 +94,7 @@ usage: invoiceAnalysis.py [-h] [-k IC_API_KEY] [-u username] [-p password] [-a a
 | --sendGridFrom              | sendGridFrom         | None                  | SendGrid from email addresss to send output report from. 
 | --sendGridSubject           | sendGridSubject      | None                  | SendGrid email subject.       
 | --output                    | output               | invoice-analysis.xlsx | Output file name used.        
-| --SL_PRIVATE                |                      | --no_SL_PRIVATE       | Whether to use Public or Private Endpoint. 
-| [--oldFormat](oldFormat.md) |                      | --no_oldFormat        | Specify old Format of output.
+| --SL_PRIVATE                |                      | --no_SL_PRIVATE       | Whether to use Public or Private Endpoint.
 | --storage                   |                      | --no_storage          | Whether to write additional level of classic Block & File storage analysis to worksheet (default: False) 
 | --no-summary                |                      | --summary             | Whether to write summary detail tabs to worksheet. (default: True)
 | --no-detail                 |                      | --detail              | Whether to Write detail tabs to worksheet. (default: True)
@@ -103,6 +102,7 @@ usage: invoiceAnalysis.py [-h] [-k IC_API_KEY] [-u username] [-p password] [-a a
 | --no-serverdetail           |                      | --serverdetail        | Whether to write server detail tabs to worksheet (default: True)
 | --cosdetail                 |                      | --no-cosdetail        | Whether to write Classic OBject Storage tab to worksheet (default: False)
 | --bss                       |                      | --no-bss              | Include IBM Cloud BSS Metered Service detail tabs
+| --users                     |                      | --users               | Include List of Account Users (default: False) apikey must have viewer access to users
 
 ### Examples
 

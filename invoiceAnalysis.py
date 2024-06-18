@@ -466,12 +466,6 @@ def getInvoiceDetail(startdate, enddate):
             # ITERATE THROUGH DETAIL
             for item in Billing_Invoice:
                 logging.debug(item)
-
-                if item["billingItemId"] == x:
-                    product = client['Product_Item_Category'].getBillingItems(id=item["category"]["id"], mask="id,account.id,account.accountSatusId,account.brandId,account.CompanyName, lastBIllDate,modifyDate,notes,recurringFee")
-                    print (product)
-                    quit()
-
                 totalOneTimeAmount = float(item['totalOneTimeAmount'])
                 billingItemId = item['billingItemId']
                 if "group" in item["category"]:
@@ -1077,6 +1071,7 @@ def createReport(filename, classicUsage):
         createAccountDetailTab(accountDetail)
     if userFlag:
         createUserTab(userList)
+
     if detailFlag:
         createDetailTab(classicUsage)
 
@@ -1824,124 +1819,6 @@ def getBSS():
         createChargesbyVolume(storage, i)
     return
 
-def bulkReport():
-    """
-    --bulk to generate Bulk Reports for multiple accounts
-    requires IMS access and authority to accounts
-    must specify -u, -p, and provide yubi key
-
-    :return:
-    """
-    def createMasterAccountDetailTab(accountDetail):
-        """
-        Write account to excel
-        """
-        logging.info("Creating Master Account tab.")
-        accountDetail.to_excel(writer, sheet_name='AccountDetail')
-        format1 = workbook.add_format({'num_format': '$#,##0.00'})
-        format2 = workbook.add_format({'align': 'left'})
-        worksheet = writer.sheets['AccountDetail']
-        worksheet.set_column('A:A', 5, format2)
-        worksheet.set_column('B:B', 8, format2)
-        worksheet.set_column('C:C', 40, format2)
-        worksheet.set_column('D:D', 30, format2)
-        worksheet.set_column('E:E', 30, format2)
-        worksheet.set_column('F:F', 25, format2)
-        worksheet.set_column('G:G', 15, format2)
-        worksheet.set_column('H:J', 25, format2)
-        worksheet.set_column('K:L', 40, format2)
-        worksheet.set_column('L:L', 30, format2)
-        worksheet.set_column('M:M', 18, format2)
-        worksheet.set_column('N:ZZ', 18, format1)
-        totalrows,totalcols=accountDetail.shape
-        worksheet.autofilter(0,0,totalrows,totalcols)
-        return
-    def createMaterUserTab(userList):
-        """
-        Write usertab to excel
-        """
-        logging.info("Creating user tab.")
-        userList.to_excel(writer, sheet_name='Users')
-        format2 = workbook.add_format({'align': 'left'})
-        worksheet = writer.sheets['Users']
-        worksheet.set_column('A:S', 20, format2)
-        totalrows,totalcols=userList.shape
-        worksheet.autofilter(0,0,totalrows,totalcols)
-        return
-
-    global client, ims_username, ims_password, ims_yubikey, SL_ENDPOINT, ims_account, accountFlag, userFlag, storageFlag,\
-        accountDetail, classicUsage, userList
-    ims_username = args.username
-    ims_password = args.password
-    ims_yubikey = input("Yubi Key:")
-    SL_ENDPOINT = "http://internal.applb.softlayer.local/v3.1/internal/xmlrpc"
-    accountList = json.loads(os.getenv("accountList", "[]"))
-    client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
-
-    masterAccountList = pd.DataFrame()
-    masterUserList = pd.DataFrame()
-
-    for ims_account in accountList:
-        logging.info("Bulk mode: retrieving data from IMS Account {} between {} and {}.".format(ims_account, startdate, enddate))
-        accountDetail = getAccountDetail()
-        userList = getUsers()
-
-        if storageFlag:
-            networkStorageDF = getAccountNetworkStorage()
-
-        #  Retrieve Invoices from classic
-        classicUsage = getInvoiceDetail(startdate, enddate)
-
-
-        """"
-        Build Exel Report Report with Charges
-        """
-        split_tup = os.path.splitext(args.output)
-        """ add account # to filename """
-        file_name = split_tup[0] + "_"+str(ims_account)+".xlsx"
-
-        createReport(file_name, classicUsage)
-
-        # upload created file to COS if COS credentials provided
-        if args.COS_APIKEY != None:
-            cos = ibm_boto3.resource("s3",
-                                     ibm_api_key_id=args.COS_APIKEY,
-                                     ibm_service_instance_id=args.COS_INSTANCE_CRN,
-                                     config=Config(signature_version="oauth"),
-                                     endpoint_url=args.COS_ENDPOINT
-                                     )
-            multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
-
-        """ Create Summary data for master file"""
-        months = classicUsage["IBM_Invoice_Month"].unique()
-        for month in months:
-            """calculate each months total Recurring charge"""
-            accountDetail[month] = classicUsage[(classicUsage["IBM_Invoice_Month"] == month)]["totalRecurringCharge"].sum()
-
-        """ Add account detail and users to master table """
-        masterAccountList = pd.concat([masterAccountList, accountDetail], ignore_index=True)
-        masterUserList = pd.concat([masterUserList, userList], ignore_index=True)
-
-    """ Create Master File of Account Info and Users for bulk list """
-    split_tup = os.path.splitext(args.output)
-    """ remove file extension and add _master to filename """
-    file_name = split_tup[0] + "_master.xlsx"
-    writer = pd.ExcelWriter(file_name, engine='xlsxwriter')
-    workbook = writer.book
-    createMasterAccountDetailTab(masterAccountList)
-    createMaterUserTab(masterUserList)
-    writer.close()
-
-    if args.COS_APIKEY != None:
-        cos = ibm_boto3.resource("s3",
-                                 ibm_api_key_id=args.COS_APIKEY,
-                                 ibm_service_instance_id=args.COS_INSTANCE_CRN,
-                                 config=Config(signature_version="oauth"),
-                                 endpoint_url=args.COS_ENDPOINT
-                                 )
-        multi_part_upload(args.COS_BUCKET, file_name, "./" + file_name)
-
-    return
 
 if __name__ == "__main__":
     setup_logging()
@@ -1969,11 +1846,9 @@ if __name__ == "__main__":
     parser.add_argument("--sendGridSubject", default=os.environ.get('sendGridSubject', None), help="SendGrid email subject for output email")
     parser.add_argument("--output", default=os.environ.get('output', 'invoice-analysis.xlsx'), help="Filename Excel output file. (including extension of .xlsx)")
     parser.add_argument("--SL_PRIVATE", default=False, action=argparse.BooleanOptionalAction, help="Use IBM Cloud Classic Private API Endpoint")
-    parser.add_argument('--oldFormat', default=False, action=argparse.BooleanOptionalAction, help="Break out detail by 'D codes' consistent with CFTS Sprint process used for multiple work numbers.")
     parser.add_argument('--storage', default=False, action=argparse.BooleanOptionalAction, help="Include File, BLock and Classic Cloud Object Storage detail analysis.")
     parser.add_argument('--detail', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write detail tabs to worksheet.")
     parser.add_argument('--users', default=False, action=argparse.BooleanOptionalAction, help="Include user detail.")
-    parser.add_argument("--bulk", default=False, action=argparse.BooleanOptionalAction, help="Bulk report using IMS credentials.")
     parser.add_argument('--accountdetail', default=False, action=argparse.BooleanOptionalAction, help="Include account detail.")
     parser.add_argument('--summary', default=True, action=argparse.BooleanOptionalAction, help="Whether to Write summary tabs to worksheet.")
     parser.add_argument('--reconciliation', default=False, action=argparse.BooleanOptionalAction, help="Whether to write invoice reconciliation tabs to worksheet.")
@@ -1992,7 +1867,6 @@ if __name__ == "__main__":
 
     """Set Flags to determine which Tabs are created in output"""
     storageFlag = args.storage
-    oldFormatFlag = args.oldFormat
     detailFlag = args.detail
     summaryFlag = args.summary
     reconciliationFlag = args.reconciliation
@@ -2001,7 +1875,6 @@ if __name__ == "__main__":
     bssFlag = args.bss
     userFlag = args.users
     accountFlag = args.accountdetail
-    bulkFlag = args.bulk
 
     if args.startdate == None or args.enddate == None:
         months = int(args.months)
@@ -2029,40 +1902,35 @@ if __name__ == "__main__":
         logging.info( "Loading usage data from classicUsage.pkl file.")
         classicUsage = pd.read_pickle("classicUsage.pkl")
     else:
-        if bulkFlag:
-            startdate, enddate = getInvoiceDates(startdate, enddate)
-            bulkReport()
-            quit()
-        else:
-            if args.IC_API_KEY == None:
-                if args.username == None or args.password == None or args.account == None:
-                    logging.error("You must provide either IBM Cloud ApiKey or Internal Employee credentials & IMS account.")
-                    quit(1)
-                else:
-                    if args.username != None or args.password != None:
-                        logging.info("Using Internal endpoint and employee credentials.")
-                        ims_username = args.username
-                        ims_password = args.password
-                        if args.account == None:
-                            ims_account = input("IMS Account:")
-                        else:
-                            ims_account = args.account
-                        ims_yubikey = input("Yubi Key:")
-                        SL_ENDPOINT = "http://internal.applb.softlayer.local/v3.1/internal/xmlrpc"
-                        client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
-                    else:
-                        logging.error("Error!  Can't find internal credentials or ims account.")
-                        quit(1)
+        if args.IC_API_KEY == None:
+            if args.username == None or args.password == None or args.account == None:
+                logging.error("You must provide either IBM Cloud ApiKey or Internal Employee credentials & IMS account.")
+                quit(1)
             else:
-                logging.info("Using IBM Cloud Account API Key.")
-                IC_API_KEY = args.IC_API_KEY
-                ims_account = None
-
-                # Change endpoint to private Endpoint if command line open chosen
-                if args.SL_PRIVATE:
-                    SL_ENDPOINT = "https://api.service.softlayer.com/xmlrpc/v3.1"
+                if args.username != None or args.password != None:
+                    logging.info("Using Internal endpoint and employee credentials.")
+                    ims_username = args.username
+                    ims_password = args.password
+                    if args.account == None:
+                        ims_account = input("IMS Account:")
+                    else:
+                        ims_account = args.account
+                    ims_yubikey = input("Yubi Key:")
+                    SL_ENDPOINT = "http://internal.applb.softlayer.local/v3.1/internal/xmlrpc"
+                    client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
                 else:
-                    SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
+                    logging.error("Error!  Can't find internal credentials or ims account.")
+                    quit(1)
+        else:
+            logging.info("Using IBM Cloud Account API Key.")
+            IC_API_KEY = args.IC_API_KEY
+            ims_account = None
+
+            # Change endpoint to private Endpoint if command line open chosen
+            if args.SL_PRIVATE:
+                SL_ENDPOINT = "https://api.service.softlayer.com/xmlrpc/v3.1"
+            else:
+                SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
 
                 # Create Classic infra API client
                 client = SoftLayer.Client(username="apikey", api_key=IC_API_KEY, endpoint_url=SL_ENDPOINT)
@@ -2082,7 +1950,6 @@ if __name__ == "__main__":
 
         # Calculate invoice dates based on SLIC invoice cutoffs.
         startdate, enddate = getInvoiceDates(startdate, enddate)
-
 
         #  Retrieve Invoices from classic
         classicUsage = getInvoiceDetail(startdate, enddate)
