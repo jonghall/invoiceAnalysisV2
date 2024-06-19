@@ -829,9 +829,9 @@ def createReport(filename, classicUsage):
                 iaascosSummary = pd.pivot_table(iaascosRecords, index=["Type", "Category_Group", "childParentProduct", "Category", "Description"],
                                                  values=["childUsage", "childTotalRecurringCharge"],
                                                  columns=['IBM_Invoice_Month'],
-                                                 aggfunc={'childUsage': "sum", 'childTotalRecurringCharge': "sum"}, margins=True, margins_name="Total").rename(columns={"childUsage": "UsageQty", "ChildTotalRecurringCharge": "RecurringCharge"})
-                new_order = ["UsageQty", "RecurringCharge"]
-                iaascosSummary = iaascosSummary.reindex(new_order, axis=1)
+                                                 aggfunc={'childUsage': "sum", 'childTotalRecurringCharge': "sum"}, margins=True, margins_name="Total")
+                #new_order = ["UsageQty", "RecurringCharge"]
+                #iaascosSummary = iaascosSummary.reindex(new_order, axis=1)
                 iaascosSummary.to_excel(writer, sheet_name='Classic_COS_Detail')
                 worksheet = writer.sheets['Classic_COS_Detail']
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
