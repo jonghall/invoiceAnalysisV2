@@ -447,7 +447,8 @@ def getInvoiceDetail(startdate, enddate):
 
             try:
                 Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit,
-                                                                                    offset=offset)
+                                         offset=offset,mask="id,billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
+                                         "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee")
             except SoftLayer.SoftLayerAPIError as e:
                 logging.error("Billing_Invoice(minimal)::getInvoiceTopLevelItems: %s, %s" % (e.faultCode, e.faultString))
                 quit(1)
