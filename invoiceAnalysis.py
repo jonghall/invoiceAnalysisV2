@@ -439,33 +439,26 @@ def getInvoiceDetail(startdate, enddate):
         # PRINT INVOICE SUMMARY LINE
         logging.info('Invoice: {} Date: {} Type:{} Items: {} Amount: ${:,.2f}'.format(invoiceID, datetime.strftime(invoiceDate, "%Y-%m-%d"), invoiceType, totalItems, invoiceTotalRecurringAmount))
 
-        limit = 50 ## set limit of record returned
+        limit = 75 ## set limit of record returned
         for offset in range(0, totalItems, limit):
             if ( totalItems - offset - limit ) < 0:
                 remaining = totalItems - offset
             logging.info("Retrieving %s invoice line items for Invoice %s at Offset %s of %s" % (limit, invoiceID, offset, totalItems))
 
             try:
-                Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit,
-                                         offset=offset,mask="id,billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
-                                         "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee")
-            except SoftLayer.SoftLayerAPIError as e:
-                logging.error("Billing_Invoice(minimal)::getInvoiceTopLevelItems: %s, %s" % (e.faultCode, e.faultString))
-                quit(1)
-            print (Billing_Invoice)
-
-            try:
-                """
-                       if --storage specified on command line provide
-                       additional mapping of current storage comments to billing
-                       records billingItem.resourceTableId is link to storage.
-                       note: user must have classic Infrastructure access for storage components
-                """
-
-                Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit, offset=offset,
-                                    mask="id,billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
-                                         "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.dPart,children.description,children.category.group," \
-                                         "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
+                if datetime.strptime(invoice['createDate'], "%Y-%m-%dT%H:%M:%S%z").astimezone(dallas) < datetime(year=2023, month=5, day=1, hour=0, minute=0).astimezone(dallas):
+                    """ request without dPart prior to 2023-05 """
+                    Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit,
+                                                                                        offset=offset,
+                                                                                        mask="id,billingItemId,categoryCode,category,category.group,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
+                                                                                             "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.description,children.category.group," \
+                                                                                             "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
+                else:
+                    """ request dPart for May 2023 on """
+                    Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit, offset=offset,
+                                        mask="id,billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
+                                             "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.dPart,children.description,children.category.group," \
+                                             "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
             except SoftLayer.SoftLayerAPIError as e:
                 logging.error("Billing_Invoice::getInvoiceTopLevelItems: %s, %s" % (e.faultCode, e.faultString))
                 quit(1)
