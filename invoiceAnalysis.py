@@ -439,7 +439,7 @@ def getInvoiceDetail(startdate, enddate):
         # PRINT INVOICE SUMMARY LINE
         logging.info('Invoice: {} Date: {} Type:{} Items: {} Amount: ${:,.2f}'.format(invoiceID, datetime.strftime(invoiceDate, "%Y-%m-%d"), invoiceType, totalItems, invoiceTotalRecurringAmount))
 
-        limit = 75 ## set limit of record returned
+        limit = 2 ## set limit of record returned
         for offset in range(0, totalItems, limit):
             if ( totalItems - offset - limit ) < 0:
                 remaining = totalItems - offset
@@ -454,7 +454,7 @@ def getInvoiceDetail(startdate, enddate):
                 """
 
                 Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit, offset=offset,
-                                    mask="id, billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
+                                    mask="id,billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
                                          "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.dPart,children.description,children.category.group," \
                                          "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
             except SoftLayer.SoftLayerAPIError as e:
@@ -827,9 +827,11 @@ def createReport(filename, classicUsage):
             if len(iaascosRecords) > 0:
                 logging.info("Creating Classic_COS_Detail Tab.")
                 iaascosSummary = pd.pivot_table(iaascosRecords, index=["Type", "Category_Group", "childParentProduct", "Category", "Description"],
-                                                 values=["childTotalRecurringCharge"],
+                                                 values=["childUsage", "childTotalRecurringCharge"],
                                                  columns=['IBM_Invoice_Month'],
-                                                 aggfunc={'childTotalRecurringCharge': "sum"}, fill_value=0, margins=True, margins_name="Total")
+                                                 aggfunc={'childUsage': "sum", 'childTotalRecurringCharge': "sum"}, fill_value=0, margins=True, margins_name="Total").rename(columns={"childUsage": "UsageQty", "ChildTotalRecurringCharge": "RecurringCharge"})
+                new_order = ["UsageQty", "RecurringCharge"]
+                iaascosSummary = iaascosSummary.reindex(new_order, axis=1)
                 iaascosSummary.to_excel(writer, sheet_name='Classic_COS_Detail')
                 worksheet = writer.sheets['Classic_COS_Detail']
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
