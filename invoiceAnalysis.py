@@ -446,6 +446,14 @@ def getInvoiceDetail(startdate, enddate):
             logging.info("Retrieving %s invoice line items for Invoice %s at Offset %s of %s" % (limit, invoiceID, offset, totalItems))
 
             try:
+                Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit,
+                                                                                    offset=offset)
+            except SoftLayer.SoftLayerAPIError as e:
+                logging.error("Billing_Invoice(minimal)::getInvoiceTopLevelItems: %s, %s" % (e.faultCode, e.faultString))
+                quit(1)
+            print (Billing_Invoice)
+
+            try:
                 """
                        if --storage specified on command line provide
                        additional mapping of current storage comments to billing
