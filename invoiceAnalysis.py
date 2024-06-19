@@ -833,20 +833,21 @@ def createReport(filename, classicUsage):
         if len(classicUsage) > 0:
             iaascosRecords = classicUsage.query('RecordType == ["Child"] and childParentProduct == ["Cloud Object Storage - S3 API"]')
             if len(iaascosRecords) > 0:
-                logging.info("Creating Classic_COS_Detail Tab.")
+                logging.info("Creating Classic_COS Tab.")
                 iaascosSummary = pd.pivot_table(iaascosRecords, index=["Type", "Category_Group", "childParentProduct", "Category", "Description"],
                                                  values=["childUsage", "childTotalRecurringCharge"],
                                                  columns=['IBM_Invoice_Month'],
                                                  aggfunc={'childUsage': "sum", 'childTotalRecurringCharge': "sum"}, margins=True, margins_name="Total")
-                #new_order = ["UsageQty", "RecurringCharge"]
-                #iaascosSummary = iaascosSummary.reindex(new_order, axis=1)
-                iaascosSummary.to_excel(writer, sheet_name='Classic_COS_Detail')
-                worksheet = writer.sheets['Classic_COS_Detail']
+                new_order = ["childUsage'", "childTotalRecurringCharge"]
+                iaascosSummary = iaascosSummary.reindex(new_order, axis=1, level=0)
+                iaascosSummary.to_excel(writer, sheet_name='Classic_COS')
+                worksheet = writer.sheets['Classic_COS']
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
+                format3 = workbook.add_format({'num_format': '#,##0'})
                 worksheet.set_column("A:A", 20, format2)
                 worksheet.set_column("B:E", 40, format2)
-                worksheet.set_column("F:ZZ", 18, format1)
+                worksheet.set_column("F:ZZ", 18, format3)
         return
     def createTopSheet(classicUsage):
         """
