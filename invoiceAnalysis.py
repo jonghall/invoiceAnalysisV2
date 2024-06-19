@@ -840,7 +840,10 @@ def createReport(filename, classicUsage):
                 format3 = workbook.add_format({'num_format': '#,##0'})
                 worksheet.set_column("A:A", 20, format2)
                 worksheet.set_column("B:E", 40, format2)
-                worksheet.set_column("F:ZZ", 18, format3)
+                """ format variable month colums for usage vs cost """
+                months = len(iaascosRecords.IBM_Invoice_Month.unique())
+                worksheet.set_column(5, 5 + months + 1, 18, format3)
+                worksheet.set_column(5 + months + 2,  5 + months + 2 + months + 1, 18, format1)
         return
     def createTopSheet(classicUsage):
         """
@@ -851,7 +854,6 @@ def createReport(filename, classicUsage):
         months = classicUsage.IBM_Invoice_Month.unique()
         for i in months:
             logging.info("Creating CFTS Invoice Top Sheet tab for {}.".format(i))
-
             if len(classicUsage) > 0:
                 """
                 Get all the BSS child records with d-code in one of the IaaS divisions
