@@ -837,13 +837,13 @@ def createReport(filename, classicUsage):
                 worksheet = writer.sheets['Classic_COS']
                 format1 = workbook.add_format({'num_format': '$#,##0.00'})
                 format2 = workbook.add_format({'align': 'left'})
-                format3 = workbook.add_format({'num_format': '#,##0'})
+                format3 = workbook.add_format({'num_format': '#,##0.00000'})
                 worksheet.set_column("A:A", 20, format2)
                 worksheet.set_column("B:E", 40, format2)
-                """ format variable month colums for usage vs cost """
+                """ format variable month columns for usage vs cost """
                 months = len(iaascosRecords.IBM_Invoice_Month.unique())
-                worksheet.set_column(5, 5 + months + 1, 18, format3)
-                worksheet.set_column(5 + months + 2,  5 + months + 2 + months + 1, 18, format1)
+                worksheet.set_column(4, 4 + months + 1, 18, format3)
+                worksheet.set_column(4 + months + 2,  4 + months + 2 + months + 1, 18, format1)
         return
     def createTopSheet(classicUsage):
         """
