@@ -445,25 +445,24 @@ def getInvoiceDetail(startdate, enddate):
                 remaining = totalItems - offset
             logging.info("Retrieving %s invoice line items for Invoice %s at Offset %s of %s" % (limit, invoiceID, offset, totalItems))
 
+            if datetime.strptime(invoice['createDate'], "%Y-%m-%dT%H:%M:%S%z").astimezone(dallas) < datetime(year=2023,month=5,day=1,hour=0,minute=0).astimezone(dallas):
+                    """ if invoice date before May 2023, don't query dPart for toplevel and children """
+                    mask = "id,billingItemId,categoryCode,category,category.group,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
+                                "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.description,children.category.group," \
+                                "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee"
+            else:
+                    """ if invoice date after April 2023 query dPart for toplevel and children """
+                    mask = "id,billingItemId,categoryCode,category,category.group,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
+                                "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.description,children.category.group," \
+                                "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee"
+
             try:
-                if datetime.strptime(invoice['createDate'], "%Y-%m-%dT%H:%M:%S%z").astimezone(dallas) < datetime(year=2023, month=5, day=1, hour=0, minute=0).astimezone(dallas):
-                    """ request without dPart prior to 2023-05 """
-                    Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit,
-                                                                                        offset=offset,
-                                                                                        mask="id,billingItemId,categoryCode,category,category.group,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
-                                                                                             "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.description,children.category.group," \
-                                                                                             "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
-                else:
-                    """ request dPart for May 2023 on """
-                    Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit, offset=offset,
-                                        mask="id,billingItemId,categoryCode,category,category.group,dPart,hourlyFlag,hostName,domainName,location,notes,product.description,product.taxCategory,product.attributes.attributeType," \
-                                             "createDate,totalRecurringAmount,totalOneTimeAmount,usageChargeFlag,hourlyRecurringFee,children.billingItemId,children.dPart,children.description,children.category.group," \
-                                             "children.categoryCode,children.product,children.product.taxCategory,children.product.attributes,children.product.attributes.attributeType,children.recurringFee")
+                Billing_Invoice = client['Billing_Invoice'].getInvoiceTopLevelItems(id=invoiceID, limit=limit,offset=offset,mask=mask)
             except SoftLayer.SoftLayerAPIError as e:
                 logging.error("Billing_Invoice::getInvoiceTopLevelItems: %s, %s" % (e.faultCode, e.faultString))
                 quit(1)
-            count = 0
 
+            count = 0
 
             # ITERATE THROUGH DETAIL
             for item in Billing_Invoice:
