@@ -517,5 +517,5 @@ cython_debug/
 
 *.pkl
 *.xlsx
-storage.json
-test_accounts.txt
+*.json
+*.txt
