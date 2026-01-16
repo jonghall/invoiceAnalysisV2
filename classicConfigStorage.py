@@ -1,5 +1,5 @@
 ##
-## Account Bare Metal Configuration Report
+## Account Bare Metal allowed storage report
 ## Place APIKEY & Username in config.ini
 ## or pass via commandline  (example: ConfigurationReport.py -u=userid -k=apikey)
 ##
@@ -281,9 +281,9 @@ if __name__ == "__main__":
                 else:
                     os = ""
 
-                """ If a vSphere server, and an allowed network stroage records exists iterate through storage"""
+                """ If allowed network storage records exist iterate through storage"""
 
-                if os == "VSphere" and "allowedNetworkStorage" in hardware:
+                if "allowedNetworkStorage" in hardware:
                         if len(hardware['allowedNetworkStorage']) > 0:
                             hardwareData = {
                                 "hardwareId": hardwareId,
