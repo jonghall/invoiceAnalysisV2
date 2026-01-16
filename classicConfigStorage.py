@@ -1,7 +1,5 @@
 ##
 ## Account Bare Metal allowed storage report
-## Place APIKEY & Username in config.ini
-## or pass via commandline  (example: ConfigurationReport.py -u=userid -k=apikey)
 ##
 
 import SoftLayer, json, os, argparse, logging, logging.config
