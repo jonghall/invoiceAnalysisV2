@@ -20,6 +20,7 @@ def setup_logging(default_path='logging.json', default_level=logging.info, env_k
         logging.config.dictConfig(config)
     else:
         logging.basicConfig(level=default_level)
+
 def createEmployeeClient(end_point_employee, employee_user, passw, token):
     """Creates a softlayer-python client that can make API requests for a given employee_user"""
     client_noauth = SoftLayer.Client(endpoint_url=end_point_employee)
@@ -29,6 +30,7 @@ def createEmployeeClient(end_point_employee, employee_user, passw, token):
     # Save result['hash'] somewhere to not have to login for every API request
     client_employee = SoftLayer.employee_client(username=employee_user, access_token=result['hash'], endpoint_url=end_point_employee)
     return client_employee
+
 def read_ims_accounts(filename):
     """
     Read IMS account numbers from a CSV or text file.
@@ -89,7 +91,7 @@ if __name__ == "__main__":
                         help="IMS Account")
     parser.add_argument("-k", "--IC_API_KEY", default=os.environ.get('IC_API_KEY', None), metavar="apikey",
                         help="IBM Cloud API Key")
-    parser.add_argument("-i", "--inputfile", default=os.environ.get('inputfile', 'accounts.txt'), metavar="inputfile", 
+    parser.add_argument("-i", "--input", default=os.environ.get('input', 'accounts.txt'), metavar="input", 
                         help="Input file containing list of IMS accounts to report on.  One account number per line.")  
     parser.add_argument("-c", "--config", help="config.ini file to load")
     parser.add_argument("-o", "--output", default=os.environ.get('output', 'storage.json'),
@@ -101,41 +103,32 @@ if __name__ == "__main__":
 
     setup_logging()
 
-    # Use mock endpoint if requested
+    # Determine which client to use based on provided credentials
+    client = None
+    
     if args.mock:
+        # Mock mode - client will be created per account in the loop
         logging.info("Using MOCK SoftLayer API endpoint")
         print("\n" + "="*60)
         print("MOCK MODE: Using simulated SoftLayer API")
         print("="*60 + "\n")
-        # Create a mock client - we'll use the first account from the input file
-        client = None  # Will be created per account in the loop
-    elif args.IC_API_KEY == None:
-        if args.username == None or args.password == None or args.account == None:
-            logging.error("You must provide either IBM Cloud ApiKey or Internal Employee credentials & IMS account.")
-            quit()
-        else:
-            if args.username != None or args.password != None or args.account != None:
-                logging.info("Using Internal endpoint and employee credentials.")
-                ims_username = args.username
-                ims_password = args.password
-                ims_yubikey = input("Yubi Key:")
-                ims_account = args.account
-                SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
-                client = createEmployeeClient(SL_ENDPOINT, ims_username, ims_password, ims_yubikey)
-            else:
-                logging.error("Error!  Can't find internal credentials or ims account.")
-                quit()
-    else:
+    
+    elif args.IC_API_KEY:
+        # IBM Cloud API Key authentication
         logging.info("Using IBM Cloud Account API Key.")
-        IC_API_KEY = args.IC_API_KEY
-        ims_account = None
-
-        # Change endpoint to private Endpoint if command line open chosen
-
         SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
-
-        # Create Classic infra API client
-        client = SoftLayer.Client(username="apikey", api_key=IC_API_KEY, endpoint_url=SL_ENDPOINT)
+        client = SoftLayer.Client(username="apikey", api_key=args.IC_API_KEY, endpoint_url=SL_ENDPOINT)
+    
+    elif args.username and args.password and args.account:
+        # Internal employee authentication
+        logging.info("Using Internal endpoint and employee credentials.")
+        ims_yubikey = input("Yubi Key:")
+        SL_ENDPOINT = "http://internal.applb.dal10.softlayer.local/v3.1/internal/xmlrpc"
+        client = createEmployeeClient(SL_ENDPOINT, args.username, args.password, ims_yubikey)
+    
+    else:
+        logging.error("You must provide either IBM Cloud ApiKey (--IC_API_KEY) or Internal Employee credentials (--username, --password, --account).")
+        quit()
 
     """
     READ LIST OF IMS ACCOUNTS AND 
@@ -143,7 +136,7 @@ if __name__ == "__main__":
     """
 
     """ Get list of ims account numbers from file. Each row should contain one ims account number."""
-    accountList = read_ims_accounts(args.inputfile)
+    accountList = read_ims_accounts(args.input)
 
     accountRecords = [] 
     for imsAccount in accountList:
@@ -182,7 +175,7 @@ if __name__ == "__main__":
                 else:
                     os = ""
 
-                """ If allowed network storage records exist iterate through storage"""
+                """ If allowed storage records exist iterate through storage"""
 
                 if "allowedNetworkStorage" in hardware:
                         if len(hardware['allowedNetworkStorage']) > 0:
