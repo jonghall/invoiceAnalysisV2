@@ -4,8 +4,9 @@
 ## or pass via commandline  (example: ConfigurationReport.py -u=userid -k=apikey)
 ##
 
-import SoftLayer, json, os, argparse, logging, logging.config, random
+import SoftLayer, json, os, argparse, logging, logging.config
 from dotenv import load_dotenv
+from mock_softlayer import MockSoftLayerClient
 
 def setup_logging(default_path='logging.json', default_level=logging.info, env_key='LOG_CFG'):
     # read logging.json for log parameters to be ued by script
@@ -73,106 +74,6 @@ def write_json_to_file(data, filename, indent=2):
     except Exception as e:
         logging.error(f"Error writing JSON data to {filename}: {str(e)}")
         return False
-
-
-class MockSoftLayerAccount:
-    """Mock SoftLayer Account service for testing"""
-    
-    def __init__(self, account_id):
-        self.account_id = account_id
-        self.all_hardware = self._generate_hardware_data()
-    
-    def _generate_hardware_data(self, count=25):
-        """Generate random hardware data"""
-        hardware_list = []
-        datacenters = ['dal10', 'dal12', 'dal13', 'wdc04', 'wdc07', 'sjc03', 'sjc04', 'lon02', 'lon04', 'fra02', 'tok02', 'syd01']
-        os_types = ['VSphere', 'CentOS', 'RedHat', 'Ubuntu', 'Windows', 'Debian']
-        storage_types = ['NAS', 'ISCSI', 'NFS']
-        
-        for i in range(count):
-            hardware_id = 1000000 + i
-            datacenter = random.choice(datacenters)
-            os_type = random.choice(os_types)
-            hostname = f"hardware-{self.account_id}-{i:03d}.{datacenter}.ibm.com"
-            
-            # Generate software components
-            software_components = []
-            if os_type:
-                software_components.append({
-                    'id': 10000 + i,
-                    'softwareLicense': {
-                        'softwareDescription': {
-                            'name': os_type
-                        }
-                    }
-                })
-            
-            # Generate storage allocations (more for VSphere systems)
-            storage_count = random.randint(2, 8) if os_type == 'VSphere' else random.randint(0, 3)
-            allowed_network_storage = []
-            
-            for s in range(storage_count):
-                storage_id = 5000000 + (i * 100) + s
-                storage = {
-                    'id': storage_id,
-                    'nasType': random.choice(storage_types),
-                    'capacityGb': random.choice([500, 1000, 2000, 4000, 8000, 12000]),
-                    'iops': random.choice([0.25, 2, 4, 10]) if random.random() > 0.3 else None,
-                    'bytesUsed': random.randint(100000000, 8000000000000)
-                }
-                allowed_network_storage.append(storage)
-            
-            hardware = {
-                'id': hardware_id,
-                'hostname': hostname,
-                'datacenter': {
-                    'id': 100 + datacenters.index(datacenter),
-                    'name': datacenter
-                },
-                'softwareComponents': software_components,
-                'allowedNetworkStorage': allowed_network_storage
-            }
-            hardware_list.append(hardware)
-        
-        return hardware_list
-    
-    def getHardware(self, id=None, limit=None, offset=0, mask=None):
-        """
-        Mock implementation of SoftLayer_Account.getHardware
-        
-        @param id: account ID (ignored in mock, uses self.account_id)
-        @param limit: number of results to return
-        @param offset: offset for pagination
-        @param mask: object mask (currently returns all data regardless)
-        @return: list of hardware dictionaries
-        """
-        logging.info(f"Mock API: getHardware called with id={id}, limit={limit}, offset={offset}")
-        
-        # Apply pagination
-        start = offset
-        end = offset + limit if limit else len(self.all_hardware)
-        
-        result = self.all_hardware[start:end]
-        logging.info(f"Mock API: Returning {len(result)} hardware items")
-        
-        return result
-
-
-class MockSoftLayerClient:
-    """Mock SoftLayer Client for testing"""
-    
-    def __init__(self, account_id=None, **kwargs):
-        self.account_id = account_id
-        self.services = {
-            'Account': MockSoftLayerAccount(account_id)
-        }
-    
-    def __getitem__(self, service_name):
-        """Return mock service"""
-        if service_name in self.services:
-            return self.services[service_name]
-        else:
-            raise Exception(f"Mock service {service_name} not implemented")
 
 
 if __name__ == "__main__":
