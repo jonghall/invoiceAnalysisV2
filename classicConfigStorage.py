@@ -5,6 +5,7 @@
 import SoftLayer, json, os, argparse, logging, logging.config
 from dotenv import load_dotenv
 from mock_softlayer import MockSoftLayerClient
+from SoftLayer.exceptions import SoftLayerAPIError
 
 def setup_logging(default_path='logging.json', default_level=logging.info, env_key='LOG_CFG'):
     # read logging.json for log parameters to be ued by script
@@ -257,21 +258,66 @@ if __name__ == "__main__":
     """ Get list of ims account numbers from file. Each row should contain one ims account number."""
     accountList = read_ims_accounts(args.input)
 
-    accountRecords = [] 
+    accountRecords = []
+    failed_accounts = []
+    
     for imsAccount in accountList:
-        # Create mock client for this account if in mock mode
-        if args.mock:
-            client = MockSoftLayerClient(account_id=imsAccount)
-            logging.info(f"Created mock client for account {imsAccount}")
-        
-        # Get all hardware with storage for this account
-        hardware_records = get_account_hardware_storage(client, imsAccount, limit=10)
-        
-        # Add account record with hardware data
-        accountRecords.append({
-            "accountId": imsAccount,
-            "hardware": hardware_records
-        })
+        try:
+            # Create mock client for this account if in mock mode
+            if args.mock:
+                client = MockSoftLayerClient(account_id=imsAccount)
+                logging.info(f"Created mock client for account {imsAccount}")
+            
+            # Get all hardware with storage for this account
+            hardware_records = get_account_hardware_storage(client, imsAccount, limit=10)
+            
+            # Add account record with hardware data
+            accountRecords.append({
+                "accountId": imsAccount,
+                "hardware": hardware_records
+            })
+            logging.info(f"Successfully processed account {imsAccount} with {len(hardware_records)} hardware items")
+            
+        except SoftLayerAPIError as e:
+            error_msg = f"SoftLayer API Error for account {imsAccount}: {e.faultCode} - {e.faultString}"
+            logging.error(error_msg)
+            print(f"\n❌ ERROR: {error_msg}")
+            failed_accounts.append({"account": imsAccount, "error": str(e.faultString)})
+            
+            # Add account with error information
+            accountRecords.append({
+                "accountId": imsAccount,
+                "error": str(e.faultString),
+                "hardware": []
+            })
+            
+        except Exception as e:
+            error_msg = f"Unexpected error processing account {imsAccount}: {str(e)}"
+            logging.error(error_msg)
+            print(f"\n❌ ERROR: {error_msg}")
+            failed_accounts.append({"account": imsAccount, "error": str(e)})
+            
+            # Add account with error information
+            accountRecords.append({
+                "accountId": imsAccount,
+                "error": str(e),
+                "hardware": []
+            })
+    
+    # Print summary
+    print(f"\n" + "="*60)
+    print(f"Processing Summary")
+    print("="*60)
+    print(f"Total accounts: {len(accountList)}")
+    print(f"Successful: {len(accountList) - len(failed_accounts)}")
+    print(f"Failed: {len(failed_accounts)}")
+    
+    if failed_accounts:
+        print("\nFailed Accounts:")
+        for fail in failed_accounts:
+            print(f"  - Account {fail['account']}: {fail['error']}")
+    
+    print("="*60 + "\n")
     
     write_json_to_file(accountRecords, args.output, indent=2)
 
