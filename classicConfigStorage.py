@@ -77,27 +77,148 @@ def write_json_to_file(data, filename, indent=2):
         logging.error(f"Error writing JSON data to {filename}: {str(e)}")
         return False
 
+def extract_os_from_hardware(hardware):
+    """
+    Extract the operating system name from hardware data.
+    
+    @param hardware: dict, hardware data containing softwareComponents
+    @return: string, OS name or empty string if not found
+    """
+    if "softwareComponents" in hardware:
+        if len(hardware["softwareComponents"]) > 0:
+            return hardware["softwareComponents"][0]["softwareLicense"]["softwareDescription"]["name"]
+    return ""
+
+def extract_storage_from_hardware(hardware):
+    """
+    Extract storage information from hardware data.
+    
+    @param hardware: dict, hardware data containing allowedNetworkStorage
+    @return: list of dicts, storage records with id, type, iops, capacity, and bytes used
+    """
+    storage_records = []
+    
+    if "allowedNetworkStorage" in hardware and len(hardware['allowedNetworkStorage']) > 0:
+        for storage in hardware['allowedNetworkStorage']:
+            storage_data = {
+                'storageId': storage.get('id'),
+                'storageType': storage.get('nasType', ''),
+                'iops': storage.get('iops', 0),
+                'capacityGb': storage.get('capacityGb', 0),
+                'bytesUsed': storage.get('bytesUsed', 0)
+            }
+            storage_records.append(storage_data)
+    
+    return storage_records
+
+def process_hardware_list(hardware_list):
+    """
+    Process a list of hardware items and extract relevant storage data.
+    
+    @param hardware_list: list of dicts, hardware items from SoftLayer API
+    @return: list of dicts, processed hardware records with storage information
+    """
+    hardware_records = []
+    
+    for hardware in hardware_list:
+        datacenter_name = hardware['datacenter']['name']
+        hardware_id = hardware['id']
+        os = extract_os_from_hardware(hardware)
+        storage_records = extract_storage_from_hardware(hardware)
+        
+        # Only include hardware that has storage
+        if storage_records:
+            hardware_data = {
+                "hardwareId": hardware_id,
+                "datacenter": datacenter_name,
+                "os": os,
+                "storage": storage_records
+            }
+            hardware_records.append(hardware_data)
+    
+    return hardware_records
+
+def get_account_hardware_storage(client, account_id, limit=10):
+    """
+    Retrieve all hardware with storage for a given account using pagination.
+    
+    @param client: SoftLayer client instance (real or mock)
+    @param account_id: string, IMS account ID
+    @param limit: int, number of records to retrieve per API call (default: 10)
+    @return: list of dicts, hardware records with storage information
+    """
+    offset = 0
+    all_hardware_records = []
+    mask = 'id,datacenter.name,softwareComponents,allowedNetworkStorage.capacityGb,allowedNetworkStorage.nasType,allowedNetworkStorage.bytesUsed,allowedNetworkStorage.iops'
+    
+    while True:
+        hardware_list = client['Account'].getHardware(
+            id=account_id, 
+            limit=limit, 
+            offset=offset, 
+            mask=mask
+        )
+        
+        logging.info(f"Requesting Hardware for account {account_id}, limit={limit} @ offset {offset}, returned={len(hardware_list)}")
+        
+        if len(hardware_list) == 0:
+            break
+        
+        # Process this batch of hardware
+        hardware_records = process_hardware_list(hardware_list)
+        all_hardware_records.extend(hardware_records)
+        
+        offset += len(hardware_list)
+    
+    return all_hardware_records
+
 
 if __name__ == "__main__":
 
     load_dotenv()
-    ## READ CommandLine Arguments and load configuration file
-    parser = argparse.ArgumentParser(description="Creates a json file for all the bare metal related storage for a list of IMS accounts.")
-    parser.add_argument("-u", "--username", default=os.environ.get('ims_username', None), metavar="username",
-                        help="IMS Userid")
-    parser.add_argument("-p", "--password", default=os.environ.get('ims_password', None), metavar="password",
-                        help="IMS Password")
-    parser.add_argument("-a", "--account", default=os.environ.get('ims_account', None), metavar="account",
-                        help="IMS Account")
-    parser.add_argument("-k", "--IC_API_KEY", default=os.environ.get('IC_API_KEY', None), metavar="apikey",
-                        help="IBM Cloud API Key")
-    parser.add_argument("-i", "--input", default=os.environ.get('input', 'accounts.txt'), metavar="input", 
-                        help="Input file containing list of IMS accounts to report on.  One account number per line.")  
-    parser.add_argument("-c", "--config", help="config.ini file to load")
-    parser.add_argument("-o", "--output", default=os.environ.get('output', 'storage.json'),
-                       help="Text filename for output file. (including extension of .json)")
-    parser.add_argument("--mock", action="store_true",
-                       help="Use mock/simulated SoftLayer API endpoint (for testing without credentials)")
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Create a JSON file with bare metal storage information for a list of IMS accounts."
+    )
+    
+    # Authentication arguments
+    parser.add_argument("-u", "--username", 
+                        default=os.environ.get('ims_username', None),
+                        metavar="USERNAME",
+                        help="IMS user ID for internal authentication.")
+    parser.add_argument("-p", "--password",
+                        default=os.environ.get('ims_password', None),
+                        metavar="PASSWORD",
+                        help="IMS password for internal authentication.")
+    parser.add_argument("-a", "--account",
+                        default=os.environ.get('ims_account', None),
+                        metavar="ACCOUNT",
+                        help="IMS account number for internal authentication.")
+    parser.add_argument("-k", "--api-key",
+                        default=os.environ.get('IC_API_KEY', None),
+                        metavar="API_KEY",
+                        dest="api_key",
+                        help="IBM Cloud API key for authentication.")
+    
+    # Input/Output arguments
+    parser.add_argument("-i", "--input",
+                        default=os.environ.get('input', 'accounts.txt'),
+                        metavar="FILE",
+                        help="Input file containing list of IMS accounts (one per line). Default: accounts.txt")
+    parser.add_argument("-o", "--output",
+                        default=os.environ.get('output', 'storage.json'),
+                        metavar="FILE",
+                        help="Output JSON file for storage data. Default: storage.json")
+    parser.add_argument("-c", "--config",
+                        default=None,
+                        metavar="FILE",
+                        help="Configuration file to load (optional).")
+    
+    # Mode arguments
+    parser.add_argument("--mock",
+                        action="store_true",
+                        help="Use mock/simulated SoftLayer API for testing without credentials.")
 
     args = parser.parse_args()
 
@@ -113,11 +234,11 @@ if __name__ == "__main__":
         print("MOCK MODE: Using simulated SoftLayer API")
         print("="*60 + "\n")
     
-    elif args.IC_API_KEY:
+    elif args.api_key:
         # IBM Cloud API Key authentication
         logging.info("Using IBM Cloud Account API Key.")
         SL_ENDPOINT = "https://api.softlayer.com/xmlrpc/v3.1"
-        client = SoftLayer.Client(username="apikey", api_key=args.IC_API_KEY, endpoint_url=SL_ENDPOINT)
+        client = SoftLayer.Client(username="apikey", api_key=args.api_key, endpoint_url=SL_ENDPOINT)
     
     elif args.username and args.password and args.account:
         # Internal employee authentication
@@ -127,7 +248,7 @@ if __name__ == "__main__":
         client = createEmployeeClient(SL_ENDPOINT, args.username, args.password, ims_yubikey)
     
     else:
-        logging.error("You must provide either IBM Cloud ApiKey (--IC_API_KEY) or Internal Employee credentials (--username, --password, --account).")
+        logging.error("You must provide either IBM Cloud API Key (--api-key) or Internal Employee credentials (--username, --password, --account).")
         quit()
 
     """
@@ -145,74 +266,14 @@ if __name__ == "__main__":
             client = MockSoftLayerClient(account_id=imsAccount)
             logging.info(f"Created mock client for account {imsAccount}")
         
-        limit = 10
-        offset = 0
-        """ Initialize account record """
-        accountRecords.append({"accountId": imsAccount,
-                               "hardware": []})
-
-        while True:
-            hardwarelist = client['Account'].getHardware(id=imsAccount, limit=limit, offset=offset, mask='id,datacenter.name,softwareComponents,allowedNetworkStorage.capacityGb, allowedNetworkStorage.nasType, allowedNetworkS.bytesUsed, allowedNetworkStorage.iops')
-
-            logging.info("Requesting Hardware for account {}, limit={} @ offset {}, returned={}".format(imsAccount, limit, offset, len(hardwarelist)))
-            if len(hardwarelist) == 0:
-                break
-            else:
-                offset = offset + len(hardwarelist)
-            """
-            Extract hardware data from json
-            """
-            hardwareRecords = []
-            for hardware in hardwarelist:
-                datacenterName = hardware['datacenter']['name']
-                hardwareId = hardware['id']
-
-                if "softwareComponents" in hardware:
-                    if len(hardware["softwareComponents"])>0:
-                        os = hardware["softwareComponents"][0]["softwareLicense"]["softwareDescription"]["name"]
-                    else:
-                        os = ""
-                else:
-                    os = ""
-
-                """ If allowed storage records exist iterate through storage"""
-
-                if "allowedNetworkStorage" in hardware:
-                        if len(hardware['allowedNetworkStorage']) > 0:
-                            hardwareData = {
-                                "hardwareId": hardwareId,
-                                "datacenter": datacenterName,
-                                "os": os,
-                                "storage":[]
-                            }
-                            storageRecords = []
-                            for storage in hardware['allowedNetworkStorage']:
-                                storageId = storage['id']
-                                storageType = ""
-                                iops = 0
-                                capacity = 0
-                                bytesUsed = 0        
-                                if 'nasType' in storage.keys():
-                                    storageType = storage['nasType']
-                                if 'iops' in storage.keys():
-                                    iops = storage['iops']
-                                if 'capacityGb' in storage.keys():
-                                    capacity = storage['capacityGb']
-                                if 'bytesUsed' in storage.keys():
-                                    bytesUsed = storage['bytesUsed']
-                                data = {       
-                                        'storageId': storageId,
-                                        'storageType': storageType,
-                                        'iops': iops,
-                                        'capacityGb': capacity,
-                                        'bytesUsed': bytesUsed
-                                    }
-                                storageRecords.append(data)
-                            hardwareData["storage"] = storageRecords
-                            hardwareRecords.append(hardwareData) 
-
-
-                if len(hardwareRecords) > 0:
-                    accountRecords[-1]['hardware'] = hardwareRecords        
+        # Get all hardware with storage for this account
+        hardware_records = get_account_hardware_storage(client, imsAccount, limit=10)
+        
+        # Add account record with hardware data
+        accountRecords.append({
+            "accountId": imsAccount,
+            "hardware": hardware_records
+        })
+    
     write_json_to_file(accountRecords, args.output, indent=2)
 
